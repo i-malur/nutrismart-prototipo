@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
-import { 
-  User, 
-  Mail, 
-  Lock, 
-  Calendar, 
-  Sparkles, 
-  ArrowRight, 
-  Eye, 
-  EyeOff, 
-  ShieldCheck, 
+import {
+  User,
+  Mail,
+  Lock,
+  Calendar,
+  Sparkles,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  ShieldCheck,
   Utensils,
   Clock
 } from 'lucide-react';
 import { UserProfile, DayPlan } from '../types';
 import { Logo } from './Logo';
+import { Stethoscope, ExternalLink } from 'lucide-react';
+
 
 interface AuthScreenProps {
   onLogin: (user: UserProfile) => void;
@@ -43,11 +45,11 @@ const DIET_OPTIONS = [
   'Econômica & Zero Desperdício'
 ];
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ 
-  onLogin, 
-  defaultUser, 
-  weeklyPlan, 
-  onUpdateWeeklyPlan 
+export const AuthScreen: React.FC<AuthScreenProps> = ({
+  onLogin,
+  defaultUser,
+  weeklyPlan,
+  onUpdateWeeklyPlan
 }) => {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [showPassword, setShowPassword] = useState(false);
@@ -72,7 +74,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   });
 
   const toggleRestriction = (item: string) => {
-    setRestrictions(prev => 
+    setRestrictions(prev =>
       prev.includes(item) ? prev.filter(r => r !== item) : [...prev, item]
     );
   };
@@ -201,7 +203,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
   return (
     <div className="min-h-screen bg-[#FAF7EE] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      
+
       {/* Decorative background blurs using brand colors */}
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#D0F4A4]/40 rounded-full blur-3xl pointer-events-none -translate-y-1/2" />
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#63D753]/20 rounded-full blur-3xl pointer-events-none translate-y-1/2" />
@@ -227,22 +229,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           <button
             type="button"
             onClick={() => { setMode('login'); setErrorMsg(''); }}
-            className={`flex-1 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${
-              mode === 'login'
+            className={`flex-1 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${mode === 'login'
                 ? 'bg-[#0C6816] text-white shadow-md'
                 : 'text-[#5E6B52] hover:text-[#0C6816]'
-            }`}
+              }`}
           >
             Entrar na Conta
           </button>
           <button
             type="button"
             onClick={() => { setMode('register'); setErrorMsg(''); }}
-            className={`flex-1 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${
-              mode === 'register'
+            className={`flex-1 py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${mode === 'register'
                 ? 'bg-[#0C6816] text-white shadow-md'
                 : 'text-[#5E6B52] hover:text-[#0C6816]'
-            }`}
+              }`}
           >
             Criar Nova Conta
           </button>
@@ -347,7 +347,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           ) : (
             /* ================= REGISTRO / CADASTRO FORM ================= */
             <form onSubmit={handleRegisterSubmit} className="space-y-5">
-              
+
               <div>
                 <label className="block text-xs sm:text-sm font-bold text-[#1F2E1E] mb-1.5">
                   Nome Completo *
@@ -453,11 +453,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                         key={item}
                         type="button"
                         onClick={() => toggleRestriction(item)}
-                        className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
-                          isSelected
+                        className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${isSelected
                             ? 'bg-[#0C6816] text-white border-[#0C6816] shadow-2xs'
                             : 'bg-[#FAF7EE] text-[#5E6B52] border-[#EFE6D1] hover:border-[#63D753]'
-                        }`}
+                          }`}
                       >
                         {item}
                       </button>
@@ -481,11 +480,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   <button
                     type="button"
                     onClick={() => setHasFixedPlan(!hasFixedPlan)}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
-                      hasFixedPlan
+                    className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${hasFixedPlan
                         ? 'bg-[#0C6816] text-white border-[#0C6816]'
                         : 'bg-[#FAF7EE] text-[#0C6816] border-[#0C6816]/30'
-                    }`}
+                      }`}
                   >
                     {hasFixedPlan ? '✓ Sim, cadastrar refeições' : '+ Cadastrar meu plano'}
                   </button>
@@ -560,6 +558,25 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     </p>
                   </div>
                 )}
+              </div>
+
+
+              {/* Bloco/Chamada para Nutricionistas */}
+              <div className="pt-2 border-t border-[#EFE6D1] text-center space-y-2">
+                <p className="text-xs font-medium text-[#5E6B52]">
+                  É profissional da saúde e quer atender utilizadores da plataforma?
+                </p>
+
+                <a
+                  href="https://forms.gle/Bo9MKCGpqZA1PmzAA"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 bg-[#FAF7EE] hover:bg-[#EFE6D1] text-[#0C6816] font-bold py-2.5 px-4 rounded-xl border border-[#EFE6D1] hover:border-[#63D753] transition-all text-xs cursor-pointer shadow-2xs group"
+                >
+                  <Stethoscope className="w-4 h-4 text-[#63D753] group-hover:scale-110 transition-transform" />
+                  <span>Quero me cadastrar como Nutricionista</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-70 ml-0.5" />
+                </a>
               </div>
 
               <button
