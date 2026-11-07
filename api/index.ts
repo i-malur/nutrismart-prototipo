@@ -44,7 +44,7 @@ Usuário: ${userContext.name || 'Usuário'}`;
     const prompt = `Instrução: ${systemInstruction}\n\nHistórico:\n${formattedHistory}\n\nUsuário: ${message || "Olá"}`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
     });
 
