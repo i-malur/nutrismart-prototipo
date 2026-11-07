@@ -48,70 +48,63 @@ export const Navbar: React.FC<NavbarProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#EFE6D1] shadow-xs">
-      {/* Top Banner / Brand Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-18">
-          
-          {/* Logo with uploaded vector mark */}
-          <div 
-            onClick={() => onSelectTab('dispensa')}
-            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group select-none"
-            id="brand-logo-btn"
-          >
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white border border-[#EFE6D1] flex items-center justify-center shadow-xs group-hover:scale-105 group-hover:border-[#63D753] transition-all p-1">
-              <Logo size="md" />
+  <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#EFE6D1] shadow-xs">
+    {/* Top Banner / Brand Header */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-between h-16 sm:h-18">
+        
+        {/* Logo with uploaded vector mark */}
+        <div 
+          onClick={() => onSelectTab('dispensa')}
+          className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group select-none"
+          id="brand-logo-btn"
+        >
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white border border-[#EFE6D1] flex items-center justify-center shadow-xs group-hover:scale-105 group-hover:border-[#63D753] transition-all p-1">
+            <Logo size="md" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="font-display font-black text-xl sm:text-2xl tracking-tight text-[#0C6816]">
+                nutri<span className="text-[#63D753]">smart</span>
+              </span>
+              <span className="px-1.5 py-0.2 text-[9px] sm:text-[10px] font-bold bg-[#D0F4A4] text-[#0C6816] rounded-full border border-[#63D753]/40">
+                IA
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-display font-black text-xl sm:text-2xl tracking-tight text-[#0C6816]">
-                  nutri<span className="text-[#63D753]">smart</span>
-                </span>
-                <span className="px-1.5 py-0.2 text-[9px] sm:text-[10px] font-bold bg-[#D0F4A4] text-[#0C6816] rounded-full border border-[#63D753]/40">
-                  IA
-                </span>
-              </div>
-              <p className="text-[11px] text-[#5E6B52] font-medium hidden sm:block">
-                Nutrição Personalizada & Inteligente
-              </p>
+            <p className="text-[11px] text-[#5E6B52] font-medium hidden sm:block">
+              Nutrição Personalizada & Inteligente
+            </p>
+          </div>
+        </div>
+
+        {/* User Status Bar & Quick Actions */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          
+          {/* Gamification Points & Streak */}
+          <div 
+            onClick={() => onSelectTab('desafios')}
+            className="flex items-center gap-1.5 sm:gap-2 bg-[#FAF7EE] border border-[#EFE6D1] hover:border-[#63D753] px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full cursor-pointer transition-colors shadow-2xs"
+            title="Ver Desafios e Loja de Prêmios"
+            id="header-gamification-pill"
+          >
+            <div className="flex items-center gap-1 text-[#0C6816] font-bold text-xs sm:text-sm">
+              <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 fill-orange-500 animate-pulse" />
+              <span>{user.streakDays}d</span>
+            </div>
+            <span className="w-0.5 h-3 bg-[#EFE6D1] rounded-full" />
+            <div className="flex items-center gap-1 text-[#0C6816] font-bold text-xs sm:text-sm">
+              <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
+              <span>{user.points} pts</span>
             </div>
           </div>
 
-          {/* User Status Bar & Quick Actions */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          {/* User Profile Avatar & Logout (Ocultos em telas menores / mobile) */}
+          <div className="hidden md:flex items-center gap-2 sm:gap-4 pl-2 border-l border-[#EFE6D1]">
             
-            {/* Gamification Points & Streak */}
-            <div 
-              onClick={() => onSelectTab('desafios')}
-              className="flex items-center gap-1.5 sm:gap-2 bg-[#FAF7EE] border border-[#EFE6D1] hover:border-[#63D753] px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full cursor-pointer transition-colors shadow-2xs"
-              title="Ver Desafios e Loja de Prêmios"
-              id="header-gamification-pill"
-            >
-              <div className="flex items-center gap-1 text-[#0C6816] font-bold text-xs sm:text-sm">
-                <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 fill-orange-500 animate-pulse" />
-                <span>{user.streakDays}d</span>
-              </div>
-              <span className="w-0.5 h-3 bg-[#EFE6D1] rounded-full" />
-              <div className="flex items-center gap-1 text-[#0C6816] font-bold text-xs sm:text-sm">
-                <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
-                <span>{user.points} pts</span>
-              </div>
-            </div>
-
-            {/* AI Assistant Button (Hidden on small mobile since we have floating/bottom bar) */}
-            <button
-              onClick={onOpenAiAssistant}
-              id="nav-ai-assistant-btn"
-              className="hidden sm:flex items-center gap-2 bg-[#0C6816] hover:bg-[#095011] text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-xs hover:shadow active:scale-95 cursor-pointer"
-            >
-              <Bot className="w-4 h-4 text-[#D0F4A4]" />
-              <span>Assistente IA</span>
-            </button>
-
             {/* User Profile Avatar / Cadastro Button */}
             <button 
               onClick={onOpenUserProfile}
-              className="flex items-center gap-2 pl-1.5 sm:pl-2 sm:border-l border-[#EFE6D1] cursor-pointer group bg-transparent text-left"
+              className="flex items-center gap-2 cursor-pointer group bg-transparent text-left"
               id="user-profile-btn"
               title="Editar Perfil, Cadastro e Restrições Alimentares"
             >
@@ -149,45 +142,47 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
           </div>
-        </div>
-      </div>
 
-      {/* Desktop Navigation Tabs (Hidden on mobile to avoid horizontal clutter) */}
-      <div className="hidden md:block bg-[#FAF7EE] border-t border-[#EFE6D1]/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-1 sm:space-x-2 overflow-x-auto py-2 scrollbar-none" aria-label="Tabs">
-            {navItems.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  id={`tab-btn-${tab.id}`}
-                  onClick={() => onSelectTab(tab.id)}
-                  className={`
-                    whitespace-nowrap flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 relative cursor-pointer
-                    ${isActive 
-                      ? 'bg-[#0C6816] text-white shadow-xs font-bold' 
-                      : 'text-[#5E6B52] hover:text-[#0C6816] hover:bg-[#EFE6D1]/60'
-                    }
-                  `}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#D0F4A4]' : tab.highlight ? 'text-[#63D753]' : 'text-[#5E6B52]'}`} />
-                  <span>{tab.label}</span>
-                  {tab.badge !== undefined && (
-                    <span className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${isActive ? 'bg-[#63D753] text-[#0C6816]' : 'bg-[#EFE6D1] text-[#0C6816]'}`}>
-                      {tab.badge}
-                    </span>
-                  )}
-                  {tab.reward && (
-                    <Award className="w-3.5 h-3.5 text-amber-500 ml-0.5" />
-                  )}
-                </button>
-              );
-            })}
-          </nav>
         </div>
       </div>
-    </header>
-  );
+    </div>
+
+    {/* Desktop Navigation Tabs (Hidden on mobile to avoid horizontal clutter) */}
+    <div className="hidden md:block bg-[#FAF7EE] border-t border-[#EFE6D1]/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <nav className="flex space-x-1 sm:space-x-2 overflow-x-auto py-2 scrollbar-none" aria-label="Tabs">
+          {navItems.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                id={`tab-btn-${tab.id}`}
+                onClick={() => onSelectTab(tab.id)}
+                className={`
+                  whitespace-nowrap flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 relative cursor-pointer
+                  ${isActive 
+                    ? 'bg-[#0C6816] text-white shadow-xs font-bold' 
+                    : 'text-[#5E6B52] hover:text-[#0C6816] hover:bg-[#EFE6D1]/60'
+                  }
+                `}
+              >
+                <Icon className={`w-4 h-4 ${isActive ? 'text-[#D0F4A4]' : tab.highlight ? 'text-[#63D753]' : 'text-[#5E6B52]'}`} />
+                <span>{tab.label}</span>
+                {tab.badge !== undefined && (
+                  <span className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${isActive ? 'bg-[#63D753] text-[#0C6816]' : 'bg-[#EFE6D1] text-[#0C6816]'}`}>
+                    {tab.badge}
+                  </span>
+                )}
+                {tab.reward && (
+                  <Award className="w-3.5 h-3.5 text-amber-500 ml-0.5" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+    </div>
+  </header>
+);
 };
