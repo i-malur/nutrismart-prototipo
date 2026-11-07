@@ -300,12 +300,12 @@ Responda em JSON com o formato:
 // 4. AI Nutrition & Cooking Assistant Chat
 app.post("/api/ai/assistant-chat", async (req, res) => {
   try {
-    const { message, chatHistory = [], userContext = {} } = req.body;
+    const { message, chatHistory = [], userContext = {} } = req.body || {};
     const ai = getGeminiClient();
 
     if (!ai) {
       return res.json({
-        reply: `Olá! Sou o Assistente NutriSmart com IA. Para aproveitar ao máximo seus alimentos, tente combinar suas proteínas com vegetais frescos e fibras. Como posso ajudar com suas receitas ou rotina hoje?`
+        reply: "Olá! Sou o Assistente NutriSmart com IA. Para aproveitar ao máximo seus alimentos, tente combinar suas proteínas com vegetais frescos e fibras. Como posso ajudar com suas receitas ou rotina hoje?"
       });
     }
 
@@ -313,32 +313,36 @@ app.post("/api/ai/assistant-chat", async (req, res) => {
 Responda sempre de forma encorajadora, com rigor científico e aplicabilidade na rotina brasileira. Dê dicas de substituições saudáveis, conservação de alimentos, tempo de preparo e adequação aos objetivos do usuário.
 Usuário atual: ${userContext.name || 'Usuário'}
 Objetivos: ${JSON.stringify(userContext.goals || ['Equilíbrio'])}
-Alergias: ${JSON.stringify(userContext.allergies || [])}
-`;
+Alergias: ${JSON.stringify(userContext.allergies || [])}`;
 
-    const contents = [
-      ...chatHistory.map((h: any) => ({
-        role: h.role === "assistant" ? "model" : "user",
-        parts: [{ text: h.text || h.content || "" }]
-      })),
-      {
-        role: "user",
-        parts: [{ text: message }]
-      }
-    ];
+    // Converte o histórico e a mensagem em texto corrido estruturado para o modelo
+    const formattedHistory = Array.isArray(chatHistory)
+      ? chatHistory
+          .map((h: any) => `${h.role === "assistant" ? "Assistente" : "Usuário"}: ${h.text || h.content || ""}`)
+          .join("\n")
+      : "";
+
+    const prompt = `Histórico da Conversa:\n${formattedHistory}\n\nUsuário: ${message || "Olá"}`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.7-flash",
-      contents,
+      model: "gemini-2.5-flash",
+      contents: prompt,
       config: {
         systemInstruction,
       },
     });
 
-    res.json({ reply: response.text });
+    return res.json({ 
+      reply: response.text || "Não foi possível gerar uma resposta no momento." 
+    });
   } catch (error: any) {
     console.error("Error in /api/ai/assistant-chat:", error);
-    res.status(500).json({ error: error.message || "Erro no chat com IA" });
+    
+    // Retorna status 200 com mensagem amigável no JSON para evitar erro de HTML no front-end
+    return res.status(200).json({ 
+      reply: "Tive um problema ao processar sua solicitação com a IA. Por favor, tente novamente em alguns instantes.",
+      error: error.message || "Erro interno no servidor de IA"
+    });
   }
 });
 
