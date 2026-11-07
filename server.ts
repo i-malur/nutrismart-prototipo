@@ -123,7 +123,7 @@ Responda OBRIGATORIAMENTE em JSON válido, com a seguinte estrutura de array:
 ]`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -229,7 +229,7 @@ Retorne um array JSON com 7 dias, no formato exato:
 ]`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -282,7 +282,7 @@ Responda em JSON com o formato:
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -325,7 +325,7 @@ Alergias: ${JSON.stringify(userContext.allergies || [])}`;
     const prompt = `Histórico da Conversa:\n${formattedHistory}\n\nUsuário: ${message || "Olá"}`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         systemInstruction,
