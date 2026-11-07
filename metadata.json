@@ -1,0 +1,6 @@
+{
+  "name": "NutriSmart",
+  "description": "Plataforma digital de nutrição personalizada e inteligente com dispensa virtual, receitas inteligentes, cardápios semanais, lista de compras automática, rede de nutricionistas e comunidade com desafios.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
