@@ -10,7 +10,8 @@ import {
   Sparkles,
   Flame,
   Award,
-  LogOut
+  LogOut,
+  User
 } from 'lucide-react';
 import { TabType, UserProfile } from '../types';
 
@@ -102,11 +103,11 @@ export const MobileMoreModal: React.FC<MobileMoreModalProps> = ({
           className="bg-gradient-to-r from-[#FAF7EE] to-[#EFE6D1]/40 border border-[#EFE6D1] p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-[#63D753] transition-colors"
         >
           <div className="flex items-center gap-3">
-            <img 
-              src={user.avatar} 
-              alt={user.name} 
-              className="w-11 h-11 rounded-full object-cover ring-2 ring-[#63D753]" 
-            />
+            {/* Ícone Genérico em vez da foto de perfil */}
+            <div className="w-11 h-11 rounded-full bg-[#D0F4A4] border-2 border-[#63D753] flex items-center justify-center text-[#0C6816] shrink-0">
+              <User className="w-5 h-5" />
+            </div>
+
             <div>
               <div className="flex items-center gap-1.5">
                 <p className="text-sm font-bold text-[#0C6816]">{user.name}</p>
