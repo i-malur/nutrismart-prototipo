@@ -16,7 +16,8 @@ import {
   BookOpen,
   Filter,
   Check,
-  AlertCircle
+  AlertCircle,
+  Stethoscope
 } from 'lucide-react';
 import { Nutritionist, UserProfile } from '../types';
 
@@ -102,7 +103,8 @@ export const NutritionistsView: React.FC<NutritionistsViewProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Botões do Banner: Orientador com IA + Novo Botão de Cadastre-se */}
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setIsAiTriageOpen(!isAiTriageOpen)}
               id="btn-ai-triage-nutri"
@@ -111,6 +113,17 @@ export const NutritionistsView: React.FC<NutritionistsViewProps> = ({
               <Sparkles className="w-4 h-4 text-[#0C6816]" />
               <span>Orientador com IA</span>
             </button>
+
+            <a
+              href="https://forms.gle/Bo9MKCGpqZA1PmzAA"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-3 rounded-2xl border border-white/30 transition-all active:scale-95 cursor-pointer text-xs sm:text-sm"
+            >
+              <Stethoscope className="w-4 h-4 text-[#D0F4A4]" />
+              <span>Sou Nutricionista</span>
+              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+            </a>
           </div>
         </div>
       </div>
@@ -372,7 +385,7 @@ export const NutritionistsView: React.FC<NutritionistsViewProps> = ({
       </div>
 
       {filteredApprovedNutris.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-3xl border border-[#EFE6D1] space-y-3">
+        <div className="text-center py-12 bg-[#FAF7EE] border border-[#EFE6D1] rounded-3xl space-y-3">
           <Apple className="w-12 h-12 text-[#5E6B52] mx-auto opacity-50" />
           <h3 className="font-display font-bold text-base text-[#0C6816]">Nenhum nutricionista encontrado</h3>
           <p className="text-xs text-[#5E6B52] max-w-sm mx-auto">
