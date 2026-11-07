@@ -1,10 +1,14 @@
 import express from "express";
-import path from "path";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3000;
@@ -119,7 +123,7 @@ Responda OBRIGATORIAMENTE em JSON válido, com a seguinte estrutura de array:
 ]`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.7-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -342,23 +346,17 @@ Alergias: ${JSON.stringify(userContext.allergies || [])}
 // CONFIGURAÇÃO DE AMBIENTE (PRODUÇÃO / LOCAL / VERCEL)
 // -----------------------------------------------------------
 
-// Em ambiente de produção tradicional (fora da Vercel)
-if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
-  const distPath = path.join(process.cwd(), "dist");
-  app.use(express.static(distPath));
-  
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
-  });
-}
-
-// Rodar localmente apenas quando NÃO estiver na Vercel
+// No final do server.ts:
 if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3000;
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`NutriSmart Server running on http://localhost:${PORT}`);
   });
 }
 
-// EXPORTAÇÃO COMPATÍVEL COM VERCEL SERVERLESS (.cjs / CommonJS):
-module.exports = app;
+// Garantir compatibilidade total no runtime Serverless
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = app;
+}
+
 export default app;
