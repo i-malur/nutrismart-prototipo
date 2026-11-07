@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Sparkles, 
-  Send, 
-  Bot, 
-  User, 
-  X, 
-  Lightbulb, 
-  Flame, 
+import {
+  Sparkles,
+  Send,
+  Bot,
+  User,
+  X,
+  Lightbulb,
+  Flame,
   RotateCcw,
   UtensilsCrossed,
   ShieldCheck
@@ -112,7 +112,7 @@ export const AiAssistantDrawer: React.FC<AiAssistantDrawerProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white w-full sm:max-w-md h-full shadow-2xl flex flex-col justify-between border-l border-[#EFE6D1] animate-in slide-in-from-right duration-300">
-        
+
         {/* Header */}
         <div className="p-4 sm:p-5 bg-[#0C6816] text-white flex items-center justify-between shadow-md">
           <div className="flex items-center gap-3">
@@ -150,15 +150,13 @@ export const AiAssistantDrawer: React.FC<AiAssistantDrawerProps> = ({
                 </div>
               )}
 
-              <div className={`max-w-[82%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed shadow-2xs ${
-                msg.sender === 'user'
+              <div className={`max-w-[82%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed shadow-2xs ${msg.sender === 'user'
                   ? 'bg-[#0C6816] text-white rounded-br-xs'
                   : 'bg-white border border-[#EFE6D1] text-[#1F2E1E] rounded-bl-xs'
-              }`}>
-                <p className="whitespace-pre-line">{msg.text}</p>
-                <span className={`text-[9px] block text-right mt-1 font-semibold ${
-                  msg.sender === 'user' ? 'text-white/70' : 'text-[#5E6B52]'
                 }`}>
+                <p className="whitespace-pre-line">{msg.text}</p>
+                <span className={`text-[9px] block text-right mt-1 font-semibold ${msg.sender === 'user' ? 'text-white/70' : 'text-[#5E6B52]'
+                  }`}>
                   {msg.time}
                 </span>
               </div>
@@ -189,30 +187,14 @@ export const AiAssistantDrawer: React.FC<AiAssistantDrawerProps> = ({
         </div>
 
         {/* Quick Suggestion Chips */}
-        <div className="p-3 sm:p-4 bg-white border-t border-[#EFE6D1] space-y-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
-          <p className="text-[11px] font-bold text-[#5E6B52] flex items-center gap-1">
-            <Lightbulb className="w-3 h-3 text-amber-500" />
-            Sugestões rápidas de perguntas:
-          </p>
-          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
-            {quickPrompts.map((q, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSend(q)}
-                className="text-[11px] font-medium bg-[#FAF7EE] hover:bg-[#EFE6D1] text-[#0C6816] px-2.5 py-1.5 rounded-lg border border-[#EFE6D1] whitespace-nowrap cursor-pointer transition-colors active:scale-95"
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-
+        <div className="p-3 sm:p-4 bg-white border-t border-[#EFE6D1] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)]">
           {/* Input field */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSend();
             }}
-            className="flex items-center gap-2 pt-1"
+            className="flex items-center gap-2"
           >
             <input
               type="text"
