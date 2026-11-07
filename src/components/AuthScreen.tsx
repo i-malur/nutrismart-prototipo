@@ -186,7 +186,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       onLogin({
         name: 'Camila Rocha',
         email: 'camila.rocha@nutrismart.app',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         level: 4,
         levelTitle: 'Chef Sustentável & Saudável',
         points: 840,
