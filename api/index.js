@@ -1,4 +1,5 @@
-// api/index.js
-import app from '../server.ts'; // ou o caminho do seu arquivo principal do servidor
+import app from "../server.ts";
 
-export default app;
+export default function handler(req, res) {
+  return app(req, res);
+}
