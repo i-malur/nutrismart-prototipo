@@ -1,4 +1,4 @@
-import app from "../server.ts";
+import app from "../server";
 
 export default function handler(req, res) {
   return app(req, res);
