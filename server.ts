@@ -338,24 +338,27 @@ Alergias: ${JSON.stringify(userContext.allergies || [])}
   }
 });
 
-// Serve os arquivos estáticos do Vite em produção (se não estiver rodando via Vercel estático)
-if (process.env.NODE_ENV === "production") {
+// -----------------------------------------------------------
+// CONFIGURAÇÃO DE AMBIENTE (PRODUÇÃO / LOCAL / VERCEL)
+// -----------------------------------------------------------
+
+// Em ambiente de produção tradicional (fora da Vercel)
+if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
   const distPath = path.join(process.cwd(), "dist");
   app.use(express.static(distPath));
   
-  // ATENÇÃO: As rotas de API (/api/*) DEVEM vir antes dessa linha no seu arquivo!
   app.get("*", (req, res) => {
     res.sendFile(path.join(distPath, "index.html"));
   });
 }
 
-// Rodar localmente apenas fora da Vercel
+// Rodar localmente apenas quando NÃO estiver na Vercel
 if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 3000;
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`NutriSmart Server running on http://localhost:${PORT}`);
   });
 }
 
-// OBRIGATÓRIO PARA A VERCEL SERVERLESS:
+// EXPORTAÇÃO COMPATÍVEL COM VERCEL SERVERLESS (.cjs / CommonJS):
+module.exports = app;
 export default app;
