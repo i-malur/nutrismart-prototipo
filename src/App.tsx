@@ -1,68 +1,44 @@
-import React, { useState } from 'react';
-import { 
-  Navbar 
-} from './components/Navbar';
-import { 
-  PantryView 
-} from './components/PantryView';
-import { 
-  RecipesView 
-} from './components/RecipesView';
-import { 
-  SavedItemsView 
-} from './components/SavedItemsView';
-import { 
-  NutritionistsView 
-} from './components/NutritionistsView';
-import { 
-  UserRegisterModal 
-} from './components/UserRegisterModal';
-import { 
-  AiAssistantDrawer 
-} from './components/AiAssistantDrawer';
-import {
-  MobileBottomNav
-} from './components/MobileBottomNav';
-import {
-  MobileMoreModal
-} from './components/MobileMoreModal';
-import {
-  AuthScreen
-} from './components/AuthScreen';
+import React, { useState, useEffect } from 'react';
+import { Navbar } from './components/Navbar';
+import { PantryView } from './components/PantryView';
+import { RecipesView } from './components/RecipesView';
+import { SavedItemsView } from './components/SavedItemsView';
+import { NutritionistsView } from './components/NutritionistsView';
+import { UserRegisterModal } from './components/UserRegisterModal';
+import { AiAssistantDrawer } from './components/AiAssistantDrawer';
+import { MobileBottomNav } from './components/MobileBottomNav';
+import { MobileMoreModal } from './components/MobileMoreModal';
+import { AuthScreen } from './components/AuthScreen';
 
-import {
-  initialPantry,
-  initialRecipes,
-  initialNutritionists,
-  initialUser
-} from './data/initialData';
-
-import {
-  TabType,
-  PantryItem,
-  Recipe,
-  Nutritionist,
-  UserProfile
-} from './types';
+import { initialRecipes, initialNutritionists, initialUser } from './data/initialData';
+import { TabType, PantryItem, Recipe, Nutritionist, UserProfile } from './types';
 import { Sparkles, Bot } from 'lucide-react';
+import { auth, db } from './lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
+// Importações dos serviços do Firebase
+import {
+  fetchPantryItems,
+  addPantryItemFirestore,
+  updatePantryItemFirestore,
+  deletePantryItemFirestore,
+  fetchSavedItems,
+  saveItemFirestore,
+  deleteSavedItemFirestore,
+  addRecipeFirestore, 
+  fetchUserRecipes    
+} from './services/firestoreService';
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('dispensa');
   const [userProfile, setUserProfile] = useState<UserProfile>(initialUser);
-  const [pantryItems, setPantryItems] = useState<PantryItem[]>(initialPantry);
+  const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>(initialRecipes);
   const [nutritionists, setNutritionists] = useState<Nutritionist[]>(initialNutritionists);
-
-  // ESTADO GLOBAL DE ITENS SALVOS (COM SUPORTE A LOCALSTORAGE)
-  const [savedItems, setSavedItems] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('nutrismart_saved_items');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [savedItems, setSavedItems] = useState<any[]>([]);
 
   // Modals & Drawers
   const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
@@ -75,40 +51,89 @@ export default function App() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // FUNÇÃO PARA ADICIONAR ITEM AOS SALVOS E ATUALIZAR O LOCALSTORAGE
-  const handleSaveToLibrary = (newItem: { type: string; title: string; description: string; content: any }) => {
-    const itemToSave = {
-      id: `save-${Date.now()}`,
+  // Observa o estado real do Firebase Auth e busca os dados do utilizador no Firestore
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+        setCurrentUserId(user.uid);
+
+        try {
+          // Busca o perfil real gravado na raiz da coleção users no Firestore
+          const userDocRef = doc(db, `users/${user.uid}`);
+          const userDocSnap = await getDoc(userDocRef);
+
+          if (userDocSnap.exists()) {
+            const data = userDocSnap.data();
+            setUserProfile({
+              ...initialUser,
+              name: data.name || user.email?.split('@')[0] || 'Usuário NutriSmart',
+              email: data.email || user.email || '',
+              birthDate: data.birthDate || '',
+              dietaryRestrictions: data.dietaryRestrictions || [],
+              customRestrictions: data.customRestrictions || ''
+            });
+          } else {
+            setUserProfile({
+              ...initialUser,
+              name: user.email?.split('@')[0] || 'Usuário NutriSmart',
+              email: user.email || ''
+            });
+          }
+
+          // Carrega os dados exclusivos deste UID no Firestore
+          const remotePantry = await fetchPantryItems(user.uid);
+          setPantryItems(remotePantry);
+
+          const remoteSaved = await fetchSavedItems(user.uid);
+          setSavedItems(remoteSaved);
+
+          // CARREGA AS RECEITAS DO CADERNO DO UTILIZADOR
+          const remoteRecipes = await fetchUserRecipes(user.uid);
+          if (remoteRecipes && remoteRecipes.length > 0) {
+            setRecipes(remoteRecipes);
+          } else {
+            setRecipes(initialRecipes); // Fallback para as iniciais se a subcoleção estiver vazia
+          }
+
+        } catch (e) {
+          console.error("Erro ao carregar dados do Firestore:", e);
+        }
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUserId(null);
+        setPantryItems([]);
+        setSavedItems([]);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleSaveToLibrary = async (newItem: { type: string; title: string; description: string; content: any }) => {
+    if (!currentUserId) return;
+    const itemPayload = {
       type: newItem.type,
       title: newItem.title,
       description: newItem.description,
-      createdAt: new Date().toLocaleDateString('pt-BR'),
       content: newItem.content
     };
 
-    setSavedItems(prev => {
-      const updated = [itemToSave, ...prev];
-      try {
-        localStorage.setItem('nutrismart_saved_items', JSON.stringify(updated));
-      } catch (e) {
-        console.error(e);
-      }
-      return updated;
-    });
+    const docId = await saveItemFirestore(itemPayload, currentUserId);
+    const itemToSave = {
+      id: docId || `save-${Date.now()}`,
+      ...itemPayload,
+      createdAt: new Date().toLocaleDateString('pt-BR')
+    };
 
+    setSavedItems(prev => [itemToSave, ...prev]);
     showToast(`📌 "${newItem.title}" foi salvo em Sugestões & Salvos!`);
   };
 
-  const handleDeleteSavedItem = (id: string) => {
-    setSavedItems(prev => {
-      const updated = prev.filter(item => item.id !== id);
-      try {
-        localStorage.setItem('nutrismart_saved_items', JSON.stringify(updated));
-      } catch (e) {
-        console.error(e);
-      }
-      return updated;
-    });
+  const handleDeleteSavedItem = async (id: string) => {
+    if (!currentUserId) return;
+    await deleteSavedItemFirestore(id, currentUserId);
+    setSavedItems(prev => prev.filter(item => item.id !== id));
     showToast('🗑️ Item removido dos seus salvos.');
   };
 
@@ -118,8 +143,14 @@ export default function App() {
     showToast(`👋 Bem-vindo(a) ao NutriSmart, ${user.name}!`);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error("Erro ao encerrar sessão:", e);
+    }
     setIsAuthenticated(false);
+    setCurrentUserId(null);
     setIsUserModalOpen(false);
     setIsMobileMoreOpen(false);
     setIsAiAssistantOpen(false);
@@ -131,8 +162,9 @@ export default function App() {
     showToast('👤 Perfil e preferências atualizados com sucesso!');
   };
 
-  // Pantry Handlers
-  const handleAddPantryItem = (newItem: Omit<PantryItem, 'id' | 'addedAt' | 'daysLeft'>) => {
+  // Pantry Handlers com UID real do Firebase
+  const handleAddPantryItem = async (newItem: Omit<PantryItem, 'id' | 'addedAt' | 'daysLeft'>) => {
+    if (!currentUserId) return;
     const today = new Date();
     let daysLeft = 0;
 
@@ -142,29 +174,43 @@ export default function App() {
       daysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
     }
 
+    const docId = await addPantryItemFirestore(newItem, currentUserId);
     const item: PantryItem = {
       ...newItem,
-      id: `p-${Date.now()}`,
+      id: docId || `p-${Date.now()}`,
       daysLeft,
       addedAt: today.toISOString().split('T')[0]
     };
+
     setPantryItems(prev => [item, ...prev]);
     showToast(`✅ "${item.name}" foi adicionado à sua dispensa!`);
   };
 
-  const handleDeletePantryItem = (id: string) => {
+  const handleDeletePantryItem = async (id: string) => {
+    if (!currentUserId) return;
     const item = pantryItems.find(i => i.id === id);
+    await deletePantryItemFirestore(id, currentUserId);
     setPantryItems(prev => prev.filter(i => i.id !== id));
     if (item) {
       showToast(`🗑️ "${item.name}" foi removido da dispensa.`);
     }
   };
 
-  const handleUpdatePantryQuantity = (id: string, qty: number) => {
-    setPantryItems(prev => prev.map(item => item.id === id ? { ...item, quantity: Math.max(0, qty) } : item));
+  const handleUpdatePantryQuantity = async (id: string, qty: number) => {
+    if (!currentUserId) return;
+    const updatedQty = Math.max(0, qty);
+    setPantryItems(prev => prev.map(item => {
+      if (item.id === id) {
+        const updatedItem = { ...item, quantity: updatedQty };
+        updatePantryItemFirestore(updatedItem, currentUserId);
+        return updatedItem;
+      }
+      return item;
+    }));
   };
 
-  const handleEditPantryItem = (updatedItem: PantryItem) => {
+  const handleEditPantryItem = async (updatedItem: PantryItem) => {
+    if (!currentUserId) return;
     const today = new Date();
     let daysLeft = 0;
 
@@ -174,14 +220,35 @@ export default function App() {
       daysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
     }
 
-    setPantryItems(prev => prev.map(item => item.id === updatedItem.id ? { ...updatedItem, daysLeft } : item));
-    showToast(`✏️ "${updatedItem.name}" atualizado com sucesso!`);
+    const finalItem = { ...updatedItem, daysLeft };
+    await updatePantryItemFirestore(finalItem, currentUserId);
+
+    setPantryItems(prev => prev.map(item => item.id === finalItem.id ? finalItem : item));
+    showToast(`✏️ "${finalItem.name}" atualizado com sucesso!`);
   };
 
-  // Recipe Handlers
-  const handleAddRecipe = (newRecipe: Recipe) => {
-    setRecipes(prev => [newRecipe, ...prev]);
-    showToast(`📖 "${newRecipe.title}" salva no seu caderno pessoal!`);
+  const handleAddRecipe = async (newRecipe: Recipe) => {
+    if (!currentUserId) return;
+
+    const recipePayload = {
+      ...newRecipe,
+      isUserCreated: true,
+      status: (newRecipe as any).contributeToAcervo ? 'em analise' : 'privado',
+    };
+
+    try {
+      const docId = await addRecipeFirestore(recipePayload, currentUserId);
+      const savedRecipe: Recipe = {
+        ...recipePayload,
+        id: docId || `rec-${Date.now()}`
+      };
+
+      setRecipes(prev => [savedRecipe, ...prev]);
+      showToast(`📖 "${newRecipe.title}" salva no seu caderno pessoal!`);
+    } catch (error) {
+      console.error("Erro ao salvar receita no Firestore:", error);
+      showToast('❌ Erro ao salvar receita no banco.');
+    }
   };
 
   if (!isAuthenticated) {
@@ -196,7 +263,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#FAF7EE] text-[#1F2E1E] flex flex-col font-sans selection:bg-[#D0F4A4] selection:text-[#0C6816]">
 
-      {/* Top Main Navigation */}
       <Navbar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
@@ -207,7 +273,6 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-24 md:pb-8">
 
         {activeTab === 'dispensa' && (
@@ -253,7 +318,6 @@ export default function App() {
 
       </main>
 
-      {/* User Registration & Profile Management Modal */}
       <UserRegisterModal
         isOpen={isUserModalOpen}
         onClose={() => setIsUserModalOpen(false)}
@@ -262,7 +326,6 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {/* Floating Quick AI Assistant Bubble */}
       <button
         onClick={() => setIsAiAssistantOpen(true)}
         id="floating-ai-assistant-btn"
@@ -279,7 +342,6 @@ export default function App() {
         <Sparkles className="w-4 h-4 text-[#D0F4A4] animate-pulse" />
       </button>
 
-      {/* AI Assistant Drawer */}
       <AiAssistantDrawer
         isOpen={isAiAssistantOpen}
         onClose={() => setIsAiAssistantOpen(false)}
@@ -288,7 +350,6 @@ export default function App() {
         onSaveToLibrary={handleSaveToLibrary}
       />
 
-      {/* Mobile-First Bottom Navigation */}
       <MobileBottomNav
         activeTab={activeTab}
         onSelectTab={setActiveTab}
@@ -298,7 +359,6 @@ export default function App() {
         isMoreActive={isMobileMoreOpen}
       />
 
-      {/* Mobile Overflow Menu Modal */}
       <MobileMoreModal
         isOpen={isMobileMoreOpen}
         onClose={() => setIsMobileMoreOpen(false)}
@@ -310,14 +370,12 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {/* Global Toast Notification */}
       {toast && (
         <div className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#0C6816] text-white px-5 py-3 rounded-2xl shadow-2xl border border-[#63D753] text-xs sm:text-sm font-bold flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-3 duration-300">
           <span>{toast}</span>
         </div>
       )}
 
-      {/* Minimal Footer */}
       <footer className="bg-white border-t border-[#EFE6D1] py-5 mt-12 mb-16 md:mb-0 text-center text-xs text-[#5E6B52]">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-center gap-2">
           <span className="font-display font-black text-[#0C6816]">nutrismart</span>

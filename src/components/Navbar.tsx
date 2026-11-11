@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   Apple, 
   Sparkles, 
-  CalendarDays, 
+  Bookmark, 
   PackageCheck,
   UserCheck,
   LogOut,
@@ -34,8 +34,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const navItems: { id: TabType; label: string; icon: React.ComponentType<{ className?: string }>; badge?: number; highlight?: boolean; reward?: boolean }[] = [
     { id: 'dispensa', label: 'Dispensa Virtual', icon: PackageCheck, badge: pantryCount },
-    { id: 'receitas', label: 'Receitas com IA', icon: Sparkles, highlight: true },
-    { id: 'cardapio', label: 'Sugestões & Salvos', icon: CalendarDays },
+    { id: 'receitas', label: 'Acervo de Receitas', icon: Sparkles, highlight: true },
+    { id: 'cardapio', label: 'Sugestões & Salvos', icon: Bookmark },
     { id: 'nutricionistas', label: 'Nutricionistas', icon: Apple },
   ];
 

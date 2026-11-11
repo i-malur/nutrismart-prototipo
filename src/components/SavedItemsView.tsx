@@ -30,56 +30,29 @@ interface SavedItemsViewProps {
   items?: SavedItem[];
   userRecipes?: Recipe[];
   onDeleteItem?: (id: string) => void;
-  onOpenCreateRecipeModal?: () => void;
+  onAddUserRecipe?: (recipe: Recipe) => void;
 }
-
-const INITIAL_SAVED_ITEMS: SavedItem[] = [
-  {
-    id: 'save-1',
-    type: 'recipe',
-    title: 'Omelete Rápida de Espinafre e Ovos Caipiras',
-    description: 'Receita focada em utilizar ovos e espinafre prestes a vencer na dispensa.',
-    createdAt: '10/11/2026',
-    content: {
-      prepTime: '15 min',
-      ingredients: ['3 Ovos Caipiras', '1 maço de Espinafre', '1 colher de Azeite', 'Sal e Pimenta'],
-      instructions: 'Bata os ovos, refogue o espinafre no azeite e despeje a mistura até dourar.'
-    }
-  },
-  {
-    id: 'save-2',
-    type: 'weekly_plan',
-    title: 'Plano Semanal Equilibrado & Económico',
-    description: 'Sugestão de 7 dias priorizando grãos, proteínas magras e vegetais frescos.',
-    createdAt: '08/11/2026',
-    content: {
-      daysCount: 7,
-      summary: 'Cardápio otimizado para o seu perfil e rotina.'
-    }
-  },
-  {
-    id: 'save-3',
-    type: 'shopping_list',
-    title: 'Lista de Compras Complementar',
-    description: 'Itens essenciais que faltavam para completar as refeições sugeridas da semana.',
-    createdAt: '05/11/2026',
-    content: {
-      items: ['Azeite de Oliva Extra Virgem', 'Peito de Frango 1kg', 'Iogurte Natural']
-    }
-  }
-];
 
 export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
   user,
   pantryItems = [],
-  items = INITIAL_SAVED_ITEMS,
+  items = [],
   userRecipes = [],
   onDeleteItem,
-  onOpenCreateRecipeModal,
+  onAddUserRecipe,
 }) => {
   const [activeMainTab, setActiveMainTab] = useState<'caderno' | 'salvos_ia'>('caderno');
   const [activeFilter, setActiveFilter] = useState<'all' | 'recipe' | 'weekly_plan' | 'shopping_list'>('all');
   const [selectedItemModal, setSelectedItemModal] = useState<SavedItem | null>(null);
+  
+  // Estado do Modal de Cadastro de Nova Receita Manual
+  const [isCreateRecipeModalOpen, setIsCreateRecipeModalOpen] = useState(false);
+  const [newRecipeTitle, setNewRecipeTitle] = useState('');
+  const [newRecipeDesc, setNewRecipeDesc] = useState('');
+  const [newRecipePrepTime, setNewRecipePrepTime] = useState(20);
+  const [newRecipeCalories, setNewRecipeCalories] = useState(300);
+  const [newRecipeIngredients, setNewRecipeIngredients] = useState('');
+  const [newRecipeInstructions, setNewRecipeInstructions] = useState('');
 
   // Filtra itens da IA
   const filteredIaItems = items.filter(item => {
@@ -87,8 +60,35 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
     return item.type === activeFilter;
   });
 
-  // Receitas do Caderno (Salvas + Cadastradas pelo usuário)
+  // Receitas do Caderno (Salvas do tipo 'recipe' + Cadastradas pelo usuário)
   const savedRecipes = items.filter(item => item.type === 'recipe');
+
+  const handleCreateRecipeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRecipeTitle.trim() || !onAddUserRecipe) return;
+
+    const recipePayload: Recipe = {
+      id: `rec-${Date.now()}`,
+      title: newRecipeTitle.trim(),
+      description: newRecipeDesc.trim() || 'Receita autoral cadastrada no caderno.',
+      prepTimeMinutes: Number(newRecipePrepTime) || 20,
+      calories: Number(newRecipeCalories) || 300,
+      ingredients: newRecipeIngredients.split('\n').filter(i => i.trim() !== ''),
+      instructions: newRecipeInstructions.trim(),
+      isUserCreated: true,
+      matchPercentage: 100
+    };
+
+    onAddUserRecipe(recipePayload);
+    setIsCreateRecipeModalOpen(false);
+    setActiveMainTab('caderno'); // Redireciona para o caderno após cadastrar
+
+    // Limpa campos
+    setNewRecipeTitle('');
+    setNewRecipeDesc('');
+    setNewRecipeIngredients('');
+    setNewRecipeInstructions('');
+  };
 
   const getTypeBadge = (type: SavedItem['type']) => {
     switch (type) {
@@ -119,11 +119,11 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
   return (
     <div className="space-y-6">
 
-      {/* Banner Superior Limpo */}
-      <div className="bg-gradient-to-r from-[#0C6816] via-[#147a22] to-[#0C6816] rounded-3xl p-5 sm:p-8 text-white shadow-lg relative overflow-hidden">
+      {/* Banner Superior Limpo com Botão de Cadastro de Receitas */}
+      <div className="bg-gradient-to-r from-[#0C6816] via-[#147a22] to-[#0C6816] rounded-3xl p-5 sm:p-8 text-white shadow-lg relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-[#63D753]/20 blur-2xl pointer-events-none" />
         
-        <div className="relative z-10 space-y-2">
+        <div className="relative z-10 space-y-2 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D0F4A4]/20 border border-[#D0F4A4]/30 text-[#D0F4A4] text-xs font-semibold">
             <Sparkles className="w-4 h-4" />
             <span>Biblioteca NutriSmart</span>
@@ -133,10 +133,21 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
             <h1 className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight">
               Caderno de Receitas & Itens Salvos
             </h1>
-            <p className="text-white/80 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
+            <p className="text-white/80 text-xs sm:text-sm mt-1 leading-relaxed">
               Consulte suas receitas autorais, receitas salvas e os planejamentos gerados pela IA.
             </p>
           </div>
+        </div>
+
+        {/* Botão de Cadastro no Banner Verde */}
+        <div className="relative z-10 shrink-0">
+          <button
+            onClick={() => setIsCreateRecipeModalOpen(true)}
+            className="w-full sm:w-auto px-5 py-3 bg-[#63D753] hover:bg-[#52c244] text-[#0C6816] font-extrabold text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>Cadastrar Nova Receita</span>
+          </button>
         </div>
       </div>
 
@@ -180,15 +191,13 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
               <p className="text-xs text-[#5E6B52]">Receitas autorais e salvas para o seu dia a dia.</p>
             </div>
 
-            {onOpenCreateRecipeModal && (
-              <button
-                onClick={onOpenCreateRecipeModal}
-                className="px-4 py-2.5 bg-[#0C6816] hover:bg-[#095011] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <Plus className="w-4 h-4 text-[#63D753]" />
-                <span>Nova Receita</span>
-              </button>
-            )}
+            <button
+              onClick={() => setIsCreateRecipeModalOpen(true)}
+              className="px-4 py-2.5 bg-[#0C6816] hover:bg-[#095011] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <Plus className="w-4 h-4 text-[#63D753]" />
+              <span>Nova Receita</span>
+            </button>
           </div>
 
           {savedRecipes.length === 0 && userRecipes.length === 0 ? (
@@ -254,8 +263,6 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
       {/* ========================================================================= */}
       {activeMainTab === 'salvos_ia' && (
         <div className="space-y-4">
-          
-          {/* Filtros da Biblioteca de Salvos */}
           <div className="bg-white border border-[#EFE6D1] rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Bookmark className="w-5 h-5 text-[#0C6816]" />
@@ -309,7 +316,6 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
             </div>
           </div>
 
-          {/* Grid de Cards Salvos */}
           {filteredIaItems.length === 0 ? (
             <div className="bg-white border border-[#EFE6D1] rounded-3xl p-12 text-center max-w-md mx-auto space-y-3">
               <div className="w-14 h-14 rounded-full bg-[#FAF7EE] text-[#0C6816] mx-auto flex items-center justify-center">
@@ -345,7 +351,6 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
                     </p>
                   </div>
 
-                  {/* Ações do Card */}
                   <div className="pt-3 border-t border-[#EFE6D1] flex items-center justify-between">
                     <button
                       onClick={() => setSelectedItemModal(item)}
@@ -369,7 +374,116 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
               ))}
             </div>
           )}
+        </div>
+      )}
 
+      {/* Modal de Cadastro de Nova Receita Manual */}
+      {isCreateRecipeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-[#EFE6D1] relative space-y-4 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-[#EFE6D1]">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#D0F4A4] text-[#0C6816] flex items-center justify-center font-bold">
+                  <ChefHat className="w-4 h-4" />
+                </div>
+                <h3 className="font-display font-bold text-base text-[#0C6816]">
+                  Cadastrar Nova Receita
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsCreateRecipeModalOpen(false)}
+                className="text-[#5E6B52] hover:text-[#0C6816] p-1.5 rounded-xl hover:bg-[#FAF7EE]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateRecipeSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-[#0C6816] mb-1">Título da Receita *</label>
+                <input
+                  type="text"
+                  required
+                  value={newRecipeTitle}
+                  onChange={(e) => setNewRecipeTitle(e.target.value)}
+                  placeholder="Ex: Panqueca de Aveia Fitness"
+                  className="w-full px-3.5 py-2.5 bg-[#FAF7EE] border border-[#EFE6D1] rounded-xl text-xs text-[#0C6816] outline-hidden focus:border-[#63D753]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#0C6816] mb-1">Breve Descrição</label>
+                <input
+                  type="text"
+                  value={newRecipeDesc}
+                  onChange={(e) => setNewRecipeDesc(e.target.value)}
+                  placeholder="Ex: Ótima opção rica em fibras para o café da manhã."
+                  className="w-full px-3.5 py-2.5 bg-[#FAF7EE] border border-[#EFE6D1] rounded-xl text-xs text-[#0C6816] outline-hidden focus:border-[#63D753]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-[#0C6816] mb-1">Tempo (min)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newRecipePrepTime}
+                    onChange={(e) => setNewRecipePrepTime(Number(e.target.value))}
+                    className="w-full px-3.5 py-2.5 bg-[#FAF7EE] border border-[#EFE6D1] rounded-xl text-xs text-[#0C6816] outline-hidden focus:border-[#63D753]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-[#0C6816] mb-1">Calorias (kcal)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newRecipeCalories}
+                    onChange={(e) => setNewRecipeCalories(Number(e.target.value))}
+                    className="w-full px-3.5 py-2.5 bg-[#FAF7EE] border border-[#EFE6D1] rounded-xl text-xs text-[#0C6816] outline-hidden focus:border-[#63D753]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#0C6816] mb-1">Ingredientes (um por linha)</label>
+                <textarea
+                  rows={3}
+                  value={newRecipeIngredients}
+                  onChange={(e) => setNewRecipeIngredients(e.target.value)}
+                  placeholder="1 xícara de aveia&#10;2 ovos&#10;1 banana"
+                  className="w-full px-3.5 py-2.5 bg-[#FAF7EE] border border-[#EFE6D1] rounded-xl text-xs text-[#0C6816] outline-hidden focus:border-[#63D753]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#0C6816] mb-1">Modo de Preparo</label>
+                <textarea
+                  rows={3}
+                  value={newRecipeInstructions}
+                  onChange={(e) => setNewRecipeInstructions(e.target.value)}
+                  placeholder="Amasse a banana, misture com os ovos e a aveia. Frite em frigideira antiaderente."
+                  className="w-full px-3.5 py-2.5 bg-[#FAF7EE] border border-[#EFE6D1] rounded-xl text-xs text-[#0C6816] outline-hidden focus:border-[#63D753]"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateRecipeModalOpen(false)}
+                  className="px-4 py-2 bg-[#FAF7EE] hover:bg-[#EFE6D1] text-[#5E6B52] text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#0C6816] hover:bg-[#095011] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"
+                >
+                  Cadastrar Receita
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -396,7 +510,6 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
               {selectedItemModal.description}
             </p>
 
-            {/* Conteúdo Dinâmico */}
             <div className="bg-[#FAF7EE] p-4 rounded-2xl border border-[#EFE6D1] space-y-3 max-h-60 overflow-y-auto">
               {selectedItemModal.type === 'recipe' && (
                 <>
@@ -425,9 +538,9 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
               )}
 
               {selectedItemModal.type === 'weekly_plan' && (
-                <p className="text-xs text-[#1F2E1E]">
+                <div className="text-xs text-[#1F2E1E] leading-relaxed whitespace-pre-line space-y-2">
                   {selectedItemModal.content.summary || 'Plano de 7 dias armazenado com sucesso no seu perfil.'}
-                </p>
+                </div>
               )}
             </div>
 

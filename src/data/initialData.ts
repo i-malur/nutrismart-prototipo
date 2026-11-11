@@ -1,20 +1,20 @@
 import { PantryItem, Recipe, DayPlan, ShoppingItem, Nutritionist, CommunityPost, Challenge, UserProfile, RewardCoupon } from '../types';
 
 export const initialUser: UserProfile = {
-  name: 'Camila Rocha',
-  email: 'camila.rocha@nutrismart.app',
-  birthDate: '1996-05-14',
-  password: '••••••••',
+  name: 'Novo Usuário',
+  email: '',
+  birthDate: '',
+  password: '',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-  level: 4,
-  levelTitle: 'Chef Sustentável & Saudável',
-  points: 840,
-  streakDays: 14,
+  level: 1,
+  levelTitle: 'Iniciante Saudável',
+  points: 50,
+  streakDays: 1,
   calorieTarget: 2000,
   diet: 'Equilibrada',
-  dietaryGoals: ['Equilíbrio & Vitalidade', 'Zero Desperdício', 'Mais Fibras'],
-  dietaryRestrictions: ['Sem Glúten'],
-  allergies: ['Amendoim'],
+  dietaryGoals: ['Equilíbrio & Vitalidade', 'Zero Desperdício'],
+  dietaryRestrictions: [],
+  allergies: [],
   pantryUsageType: 'residencial'
 };
 

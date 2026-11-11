@@ -1,20 +1,21 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Search, 
-  ChefHat, 
-  Clock, 
-  Flame, 
-  CheckCircle2, 
-  XCircle, 
-  FilterX, 
+import {
+  Search,
+  ChefHat,
+  Clock,
+  Flame,
+  CheckCircle2,
+  XCircle,
+  FilterX,
   ShieldAlert,
   Bookmark,
   Check,
   Plus,
-  Sparkles
+  Sparkles,
+  BookOpen
 } from 'lucide-react';
 import { Recipe, PantryItem, UserProfile } from '../types';
-import { RecipeRegisterForm } from './RecipeRegisterForm'; // Import do formulário de cadastro
+import { RecipeRegisterForm } from './RecipeRegisterForm';
 
 interface RecipesViewProps {
   recipes: Recipe[];
@@ -38,9 +39,17 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
   const [selectedTag, setSelectedTag] = useState('Todas');
   const [selectedRecipeModal, setSelectedRecipeModal] = useState<Recipe | null>(null);
   const [savedRecipeIds, setSavedRecipeIds] = useState<string[]>([]);
-  
-  // Estado para controlar a abertura da modal de cadastro de receita
+  const [activeTabFilter, setActiveTabFilter] = useState<'acervo' | 'caderno'>('acervo');
+
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+
+  const checkIsIngredientInPantry = (ingredientName: string) => {
+    if (!pantryItems || pantryItems.length === 0) return false;
+    const normIng = ingredientName.toLowerCase();
+    return pantryItems.some(item =>
+      normIng.includes(item.name.toLowerCase()) || item.name.toLowerCase().includes(normIng)
+    );
+  };
 
   const excludedTerms = useMemo(() => {
     if (!excludedIngredientsText.trim()) return [];
@@ -50,11 +59,25 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
       .filter(term => term.length > 0);
   }, [excludedIngredientsText]);
 
-  const normalizeText = (text: string) => 
+  const normalizeText = (text: string) =>
     text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+  // Regra de Filtro: Acervo Público vs Caderno Pessoal
   const filteredRecipes = useMemo(() => {
     return recipes.filter(recipe => {
+      // Se estiver na aba do acervo público, exibe apenas receitas globais ou as que foram aprovadas
+      if (activeTabFilter === 'acervo') {
+        const isUserAuthored = (recipe as any).isUserCreated;
+        const approvalStatus = (recipe as any).status;
+        if (isUserAuthored && approvalStatus !== 'aprovado') {
+          return false;
+        }
+      } else {
+        // Na aba "Meu Caderno", exibe as receitas criadas pelo usuário logado
+        const isUserAuthored = (recipe as any).isUserCreated;
+        if (!isUserAuthored) return false;
+      }
+
       const fullText = normalizeText(
         `${recipe.title} ${recipe.description} ${recipe.ingredients.map(i => i.name).join(' ')} ${recipe.tags.join(' ')}`
       );
@@ -99,11 +122,11 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
 
       return true;
     });
-  }, [recipes, user, searchTerm, excludedTerms, selectedTag]);
+  }, [recipes, user, searchTerm, excludedTerms, selectedTag, activeTabFilter]);
 
   const handleSaveRecipe = (recipe: Recipe) => {
     if (savedRecipeIds.includes(recipe.id)) return;
-    
+
     setSavedRecipeIds(prev => [...prev, recipe.id]);
 
     if (onSaveToLibrary) {
@@ -130,7 +153,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
   return (
     <div className="space-y-6">
 
-      {/* Header Banner com Botão de Abertura do Formulário */}
+      {/* Header Banner com Botão de Cadastro */}
       <div className="bg-gradient-to-r from-[#0C6816] via-[#147a22] to-[#0C6816] rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="relative z-10 space-y-2 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D0F4A4]/20 border border-[#D0F4A4]/30 text-[#D0F4A4] text-xs font-semibold">
@@ -142,11 +165,10 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
             Receitas & Inspirações
           </h1>
           <p className="text-white/80 text-xs sm:text-sm leading-relaxed">
-            Explore receitas compatíveis com as suas restrições cadastradas e com o que tem na dispensa.
+            Explore receitas compatíveis com as suas restrições e gerencie o seu caderno pessoal.
           </p>
         </div>
 
-        {/* Botão que ABRE o Formulário Real de Cadastro */}
         <button
           onClick={() => setIsRegisterModalOpen(true)}
           className="relative z-10 w-full sm:w-auto px-5 py-3.5 bg-[#63D753] hover:bg-[#52c443] text-[#0C6816] font-extrabold text-xs sm:text-sm rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer active:scale-95"
@@ -156,7 +178,34 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
         </button>
       </div>
 
-      {/* Caixa de Busca e Filtro de Exclusão (com ;) */}
+      {/* Alternância de Abas: Acervo Público vs Meu Caderno */}
+      <div className="flex items-center gap-2 border-b border-[#EFE6D1] pb-3">
+        <button
+          onClick={() => setActiveTabFilter('acervo')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            activeTabFilter === 'acervo'
+              ? 'bg-[#0C6816] text-white shadow-xs'
+              : 'bg-white text-[#5E6B52] hover:bg-[#FAF7EE] border border-[#EFE6D1]'
+          }`}
+        >
+          <ChefHat className="w-4 h-4" />
+          <span>Acervo Público Geral</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTabFilter('caderno')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            activeTabFilter === 'caderno'
+              ? 'bg-[#0C6816] text-white shadow-xs'
+              : 'bg-white text-[#5E6B52] hover:bg-[#FAF7EE] border border-[#EFE6D1]'
+          }`}
+        >
+          <BookOpen className="w-4 h-4" />
+          <span>Meu Caderno de Receitas</span>
+        </button>
+      </div>
+
+      {/* Caixa de Busca e Filtro de Exclusão */}
       <div className="bg-white border border-[#EFE6D1] rounded-3xl p-4 sm:p-5 shadow-2xs space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="relative">
@@ -176,25 +225,11 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
               type="text"
               value={excludedIngredientsText}
               onChange={e => setExcludedIngredientsText(e.target.value)}
-              placeholder="Excluir alimentos na busca (ex: cebola; pimenta; carne de porco)"
+              placeholder="Excluir alimentos (ex: cebola; pimenta; carne de porco)"
               className="w-full pl-10 pr-4 py-2.5 bg-rose-50/50 border border-rose-200 focus:border-rose-400 rounded-2xl text-xs text-rose-900 outline-hidden placeholder:text-rose-400/80"
             />
           </div>
         </div>
-
-        {excludedTerms.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <span className="text-[11px] font-bold text-rose-700">Excluindo receitas com:</span>
-            {excludedTerms.map((term, index) => (
-              <span 
-                key={index}
-                className="text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300 px-2.5 py-0.5 rounded-lg flex items-center gap-1"
-              >
-                <span>{term}</span>
-              </span>
-            ))}
-          </div>
-        )}
 
         <div className="flex items-center justify-between pt-2 border-t border-[#EFE6D1] flex-wrap gap-2">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
@@ -214,21 +249,10 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
           </div>
 
           <span className="text-xs text-[#5E6B52] font-semibold">
-            Exibindo <strong className="text-[#0C6816]">{filteredRecipes.length}</strong> de {recipes.length} receitas
+            Exibindo <strong className="text-[#0C6816]">{filteredRecipes.length}</strong> receitas
           </span>
         </div>
       </div>
-
-      {/* Indicador de Filtro Ativo por Restrições do Perfil */}
-      {user && (user.dietaryRestrictions?.length > 0 || user.customRestrictions) && (
-        <div className="bg-[#FAF7EE] border border-[#EFE6D1] rounded-2xl p-3.5 flex items-center gap-3">
-          <ShieldAlert className="w-4 h-4 text-[#0C6816] shrink-0" />
-          <p className="text-xs text-[#5E6B52]">
-            Resultados filtrados automaticamente para o seu perfil 
-            {user.customRestrictions && <span> (Restrições específicas: <b>"{user.customRestrictions}"</b>)</span>}.
-          </p>
-        </div>
-      )}
 
       {/* Grid de Receitas */}
       {filteredRecipes.length === 0 ? (
@@ -238,19 +262,37 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
           </div>
           <h3 className="font-display font-bold text-base text-[#0C6816]">Nenhuma receita encontrada</h3>
           <p className="text-xs text-[#5E6B52]">
-            Tente remover alguns termos excluídos ou ajustar o filtro de busca.
+            Tente ajustar os filtros de busca ou cadastre uma nova receita no seu caderno.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredRecipes.map(recipe => {
             const isSaved = savedRecipeIds.includes(recipe.id);
+            const isUserCreated = (recipe as any).isUserCreated;
+            const status = (recipe as any).status; // 'em analise', 'aprovado', etc.
 
             return (
               <div
                 key={recipe.id}
-                className="bg-white rounded-3xl border border-[#EFE6D1] hover:border-[#63D753] transition-all p-5 shadow-2xs hover:shadow-md flex flex-col justify-between space-y-4"
+                className="bg-white rounded-3xl border border-[#EFE6D1] hover:border-[#63D753] transition-all p-5 shadow-2xs hover:shadow-md flex flex-col justify-between space-y-4 relative"
               >
+                {/* Badge para receitas criadas pelo usuário */}
+                {isUserCreated && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-lg border border-amber-300">
+                      ✏️ CADASTRADA POR VOCÊ
+                    </span>
+                    {status && (
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                        status === 'aprovado' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {status === 'aprovado' ? 'Aprovado no Acervo' : 'Em Análise'}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold bg-[#D0F4A4] text-[#0C6816] px-2.5 py-0.5 rounded-lg border border-[#63D753]/40">
@@ -271,7 +313,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
                   </p>
 
                   <div className="flex flex-wrap gap-1 pt-1">
-                    {recipe.tags.map(t => (
+                    {recipe.tags?.map(t => (
                       <span key={t} className="text-[10px] font-semibold bg-[#FAF7EE] text-[#5E6B52] px-2.5 py-1 rounded-lg border border-[#EFE6D1]">
                         {t}
                       </span>
@@ -290,11 +332,11 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
                       onClick={() => handleSaveRecipe(recipe)}
                       disabled={isSaved}
                       className={`p-2 rounded-xl transition-all cursor-pointer ${
-                        isSaved 
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                        isSaved
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : 'bg-[#FAF7EE] text-[#0C6816] hover:bg-[#EFE6D1] border border-[#EFE6D1]'
                       }`}
-                      title={isSaved ? 'Salvo em Sugestões & Salvos' : 'Salvar no meu Caderno'}
+                      title={isSaved ? 'Salvo' : 'Salvar no Caderno'}
                     >
                       {isSaved ? <Check className="w-4 h-4 text-emerald-600" /> : <Bookmark className="w-4 h-4" />}
                     </button>
@@ -324,64 +366,80 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
         />
       )}
 
-      {/* Modal de Detalhes da Receita */}
+      {/* Modal de Detalhes / Leitura Completa da Receita */}
       {selectedRecipeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-[#EFE6D1] relative space-y-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-[#EFE6D1] relative space-y-4 animate-in fade-in duration-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between pb-3 border-b border-[#EFE6D1]">
               <div>
                 <span className="text-[10px] font-bold bg-[#D0F4A4] text-[#0C6816] px-2.5 py-0.5 rounded-lg">
-                  {selectedRecipeModal.difficulty} • {selectedRecipeModal.prepTimeMinutes} min
+                  {selectedRecipeModal.difficulty} • {selectedRecipeModal.prepTimeMinutes} min • {selectedRecipeModal.calories} kcal
                 </span>
                 <h3 className="font-display font-bold text-lg text-[#0C6816] mt-2">
                   {selectedRecipeModal.title}
                 </h3>
+                <p className="text-xs text-[#5E6B52] mt-1">{selectedRecipeModal.description}</p>
               </div>
               <button
                 onClick={() => setSelectedRecipeModal(null)}
-                className="text-[#5E6B52] hover:text-[#0C6816] p-1.5 rounded-xl hover:bg-[#FAF7EE]"
+                className="text-[#5E6B52] hover:text-[#0C6816] p-1.5 rounded-xl hover:bg-[#FAF7EE] cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="bg-[#FAF7EE] p-4 rounded-2xl border border-[#EFE6D1] space-y-3 max-h-60 overflow-y-auto text-xs text-[#1F2E1E]">
-              <p className="font-bold text-[#0C6816]">Ingredientes necessários:</p>
-              <ul className="space-y-1">
-                {selectedRecipeModal.ingredients.map((ing, i) => (
-                  <li key={i} className="flex items-center justify-between">
-                    <span>{ing.name} ({ing.amount})</span>
-                    {ing.isInPantry ? (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Na dispensa
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md flex items-center gap-1">
-                        <XCircle className="w-3 h-3" /> Comprar
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
+            <div className="bg-[#FAF7EE] p-4 rounded-2xl border border-[#EFE6D1] space-y-4 text-xs text-[#1F2E1E]">
+              <div>
+                <p className="font-bold text-[#0C6816] mb-2 uppercase tracking-wide text-[11px]">Ingredientes necessários:</p>
+                <ul className="space-y-1.5">
+                  {selectedRecipeModal.ingredients.map((ing, i) => {
+                    const inPantry = checkIsIngredientInPantry(ing.name);
 
-              <p className="font-bold text-[#0C6816] pt-2">Modo de Preparo:</p>
-              <ol className="list-decimal list-inside space-y-1 leading-relaxed">
-                {selectedRecipeModal.instructions.map((inst, i) => (
-                  <li key={i}>{inst}</li>
-                ))}
-              </ol>
+                    return (
+                      <li key={i} className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-[#EFE6D1]">
+                        <span className="font-medium">{ing.name} <span className="text-[#5E6B52]">({ing.amount})</span></span>
+                        {inPantry ? (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Na dispensa
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <XCircle className="w-3 h-3" /> Comprar
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              <div>
+                <p className="font-bold text-[#0C6816] mb-2 uppercase tracking-wide text-[11px]">Modo de Preparo:</p>
+                <ol className="list-decimal list-inside space-y-2 leading-relaxed bg-white p-3 rounded-xl border border-[#EFE6D1]">
+                  {selectedRecipeModal.instructions.map((inst, i) => (
+                    <li key={i} className="pl-1">{inst}</li>
+                  ))}
+                </ol>
+              </div>
+
+              {selectedRecipeModal.chefTips && (
+                <div className="bg-[#D0F4A4]/30 border border-[#63D753]/40 p-3 rounded-xl text-[#0C6816]">
+                  <p className="font-bold text-[11px] mb-1">Dica do Chef:</p>
+                  <p className="italic text-xs">{selectedRecipeModal.chefTips}</p>
+                </div>
+              )}
             </div>
 
             <div className="pt-2 flex items-center justify-between">
               <button
                 onClick={() => handleSaveRecipe(selectedRecipeModal)}
                 disabled={savedRecipeIds.includes(selectedRecipeModal.id)}
-                className="px-4 py-2 bg-[#FAF7EE] text-[#0C6816] border border-[#EFE6D1] hover:bg-[#EFE6D1] text-xs font-bold rounded-xl flex items-center gap-1.5"
+                className="px-4 py-2 bg-[#FAF7EE] text-[#0C6816] border border-[#EFE6D1] hover:bg-[#EFE6D1] text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer"
               >
                 {savedRecipeIds.includes(selectedRecipeModal.id) ? (
                   <>
                     <Check className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Salva em Salvos</span>
+                    <span>Salva no Caderno</span>
                   </>
                 ) : (
                   <>
@@ -393,7 +451,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
 
               <button
                 onClick={() => setSelectedRecipeModal(null)}
-                className="px-5 py-2 bg-[#0C6816] text-white text-xs font-bold rounded-xl"
+                className="px-5 py-2 bg-[#0C6816] hover:bg-[#095011] text-white text-xs font-bold rounded-xl cursor-pointer"
               >
                 Fechar
               </button>

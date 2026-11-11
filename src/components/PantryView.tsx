@@ -7,10 +7,8 @@ import {
   AlertTriangle,
   PackagePlus,
   RefreshCw,
-  ChefHat,
   Tag,
   Pencil,
-  BellRing,
   Calendar
 } from 'lucide-react';
 import { PantryItem, FoodCategory, UserProfile } from '../types';
@@ -55,6 +53,9 @@ export const PantryView: React.FC<PantryViewProps> = ({
   const [isAIAnalysisOpen, setIsAIAnalysisOpen] = useState(false);
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
   const [aiAnalysisResult, setAiAnalysisResult] = useState<any>(null);
+  
+  // Estado para ordenação por data de vencimento ou nome
+  const [sortBy, setSortBy] = useState<'near_exp' | 'far_exp' | 'name'>('near_exp');
 
   // Form State
   const [newItemName, setNewItemName] = useState('');
@@ -74,7 +75,7 @@ export const PantryView: React.FC<PantryViewProps> = ({
     setNewItemBatch('');
     setNewItemQty(1);
     setNewItemUnit('unid');
-    setNewItemExpiry(''); // Data em branco por padrão
+    setNewItemExpiry('');
     setNewItemNotes('');
     setIsModalOpen(true);
   };
@@ -92,24 +93,46 @@ export const PantryView: React.FC<PantryViewProps> = ({
     setIsModalOpen(true);
   };
 
-  // Filtering
-  const filteredItems = pantryItems.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
-      (item.brand && item.brand.toLowerCase().includes(search.toLowerCase())) ||
-      (item.notes && item.notes.toLowerCase().includes(search.toLowerCase()));
-    const matchesCat = selectedCategory === 'Todas' || item.category === selectedCategory;
-    return matchesSearch && matchesCat;
-  });
+  // Filtragem e Ordenação
+  const filteredItems = pantryItems
+    .filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
+        (item.brand && item.brand.toLowerCase().includes(search.toLowerCase())) ||
+        (item.notes && item.notes.toLowerCase().includes(search.toLowerCase()));
+      const matchesCat = selectedCategory === 'Todas' || item.category === selectedCategory;
+      return matchesSearch && matchesCat;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') {
+        return a.name.localeCompare(b.name);
+      }
 
-  // Metrics
-  const expiringSoonCount = pantryItems.filter(item => item.daysLeft <= 3).length;
-  const freshCount = pantryItems.filter(item => item.daysLeft > 7).length;
+      const hasDateA = Boolean(a.expirationDate && a.expirationDate.trim());
+      const hasDateB = Boolean(b.expirationDate && b.expirationDate.trim());
+
+      // Alimentos sem data vão para o fim da lista
+      if (!hasDateA && !hasDateB) return 0;
+      if (!hasDateA) return 1;
+      if (!hasDateB) return -1;
+
+      const timeA = new Date(a.expirationDate).getTime();
+      const timeB = new Date(b.expirationDate).getTime();
+
+      if (sortBy === 'near_exp') {
+        return timeA - timeB; // Vencimento mais próximo primeiro
+      } else {
+        return timeB - timeA; // Vencimento mais distante primeiro
+      }
+    });
+
+  // Métricas
+  const expiringSoonCount = pantryItems.filter(item => item.daysLeft <= 3 && item.expirationDate).length;
+  const freshCount = pantryItems.filter(item => item.daysLeft > 7 || !item.expirationDate).length;
 
   const handleItemFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItemName.trim()) return;
 
-    // Se o utilizador não preencher a data, deixamos como undefined ou string vazia
     const expiryValue = newItemExpiry ? newItemExpiry : undefined;
 
     if (editingItem) {
@@ -173,7 +196,6 @@ export const PantryView: React.FC<PantryViewProps> = ({
   return (
     <div className="space-y-6">
 
-
       {/* Top Banner: Metrics & Quick Actions */}
       <div className="bg-gradient-to-r from-[#0C6816] via-[#147a22] to-[#0C6816] rounded-2xl p-4 sm:p-8 text-white shadow-lg relative">
         <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
@@ -203,7 +225,6 @@ export const PantryView: React.FC<PantryViewProps> = ({
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Cadastrar Alimento</span>
             </button>
-
           </div>
         </div>
 
@@ -227,7 +248,7 @@ export const PantryView: React.FC<PantryViewProps> = ({
         </div>
       </div>
 
-      {/* Filter & Search */}
+      {/* Filter, Search & Sorting */}
       <div className="bg-white border border-[#EFE6D1] rounded-2xl p-4 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
           <div className="relative w-full sm:w-80">
@@ -249,8 +270,24 @@ export const PantryView: React.FC<PantryViewProps> = ({
             )}
           </div>
 
-          <div className="text-xs text-[#5E6B52] font-semibold">
-            Exibindo <span className="text-[#0C6816] font-bold">{filteredItems.length}</span> de {pantryItems.length} alimentos
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            {/* Select de Ordenação por Data */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs font-bold text-[#5E6B52] whitespace-nowrap">Ordenar por:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="px-3 py-1.5 bg-[#FAF7EE] border border-[#EFE6D1] rounded-xl text-xs font-bold text-[#0C6816] outline-none cursor-pointer focus:border-[#63D753] w-full sm:w-auto"
+              >
+                <option value="near_exp">📅 Vencimento mais próximo</option>
+                <option value="far_exp">⏳ Vencimento mais distante</option>
+                <option value="name">🔤 Nome (A-Z)</option>
+              </select>
+            </div>
+
+            <div className="text-xs text-[#5E6B52] font-semibold whitespace-nowrap">
+              Exibindo <span className="text-[#0C6816] font-bold">{filteredItems.length}</span> de {pantryItems.length} alimentos
+            </div>
           </div>
         </div>
 
@@ -285,7 +322,7 @@ export const PantryView: React.FC<PantryViewProps> = ({
         </div>
       </div>
 
-      {/* Pantry Grid Cards */}
+      {/* Pantry Grid Cards (Sem Animação de Piscar) */}
       {filteredItems.length === 0 ? (
         <div className="bg-white border border-[#EFE6D1] rounded-2xl p-12 text-center max-w-lg mx-auto space-y-4">
           <div className="w-16 h-16 rounded-full bg-[#FAF7EE] text-[#0C6816] mx-auto flex items-center justify-center text-3xl">
@@ -308,7 +345,6 @@ export const PantryView: React.FC<PantryViewProps> = ({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredItems.map((item) => {
-            // Se não houver data de validade, não marca urgência
             const hasExpDate = Boolean(item.expirationDate && item.expirationDate.trim());
             const isUrgent = hasExpDate && item.daysLeft <= 2;
             const isWarning = hasExpDate && item.daysLeft > 2 && item.daysLeft <= 5;
@@ -318,21 +354,19 @@ export const PantryView: React.FC<PantryViewProps> = ({
                 key={item.id}
                 id={`pantry-card-${item.id}`}
                 className={`bg-white rounded-2xl border transition-all hover:shadow-md p-4 flex flex-col justify-between space-y-3 relative group ${isUrgent
-                    ? 'border-red-300 ring-1 ring-red-200 bg-red-50/20'
+                    ? 'border-red-300 bg-red-50/20'
                     : isWarning
-                      ? 'border-amber-300 ring-1 ring-amber-100 bg-amber-50/15'
+                      ? 'border-amber-300 bg-amber-50/15'
                       : 'border-[#EFE6D1] hover:border-[#63D753]'
                   }`}
               >
                 {/* Cabeçalho do Card */}
                 <div className="space-y-2.5">
                   <div className="flex items-start gap-3">
-                    {/* Badge da Inicial */}
                     <span className="w-10 h-10 rounded-xl bg-[#D0F4A4] text-[#0C6816] font-display font-black text-lg flex items-center justify-center border border-[#63D753]/40 shadow-2xs uppercase shrink-0">
                       {item.name ? item.name.charAt(0) : '?'}
                     </span>
 
-                    {/* Informações Principais */}
                     <div className="min-w-0 flex-1">
                       <h4 className="font-display font-bold text-[#0C6816] text-sm leading-snug break-words">
                         {item.name}
@@ -359,12 +393,12 @@ export const PantryView: React.FC<PantryViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Vencimento (Exibido apenas se houver data cadastrada) */}
+                  {/* Vencimento Estático (Sem Animação) */}
                   <div className="flex items-center pt-1">
                     {hasExpDate ? (
                       <span
                         className={`text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 w-fit ${isUrgent
-                            ? 'bg-red-100 text-red-700 border border-red-200 animate-pulse'
+                            ? 'bg-red-100 text-red-700 border border-red-200'
                             : isWarning
                               ? 'bg-amber-100 text-amber-800 border border-amber-200'
                               : 'bg-[#FAF7EE] text-[#0C6816] border border-[#EFE6D1]'
@@ -542,7 +576,7 @@ export const PantryView: React.FC<PantryViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#0C6816] mb-1.5">Data de Validade (Opicional)</label>
+                  <label className="block text-xs font-bold text-[#0C6816] mb-1.5">Data de Validade (Opcional)</label>
                   <input
                     type="date"
                     value={newItemExpiry}

@@ -108,12 +108,15 @@ export const AiAssistantDrawer: React.FC<AiAssistantDrawerProps> = ({
     setIsLoading(true);
 
     try {
-      // Requisita a API do backend conectada ao Gemini
       const res = await fetch('/api/ai/assistant-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: query,
+          chatHistory: messages.map(m => ({
+            role: m.sender === 'user' ? 'user' : 'assistant',
+            content: m.text
+          })),
           userContext: user,
           pantryItems
         })
@@ -122,37 +125,67 @@ export const AiAssistantDrawer: React.FC<AiAssistantDrawerProps> = ({
       const data = await res.json();
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      let suggestionData = data.suggestionData;
+      // Limpa caracteres especiais de Markdown da resposta principal da IA
+      let cleanedReply = (data.reply || '')
+        .replace(/\*\*/g, '')
+        .replace(/##\s*/g, '')
+        .replace(/---\s*/g, '')
+        .replace(/\*/g, '')
+        .replace(/^Oi [^!]+!\s*😊?/im, '')
+        .trim();
 
-      // Se o backend retornou um objeto estruturado ou se precisamos criar um card a partir da resposta da IA:
-      if (!suggestionData && data.reply) {
+      // Limita a resposta em texto a no máximo 2 receitas se a IA gerou mais
+      const recipeSections = cleanedReply.split(/(?=Receita \d+:?|Prato \d+:?)/i);
+      if (recipeSections.length > 3) {
+        cleanedReply = recipeSections.slice(0, 3).join('\n\n').trim();
+      }
+
+      let suggestionData = data.suggestionData;
+      const isErrorMsg = data.reply?.includes('contratempo') || data.reply?.includes('GROQ_API_KEY') || data.error;
+
+      if (!suggestionData && cleanedReply && !isErrorMsg) {
         const lowerQuery = query.toLowerCase();
 
         if (lowerQuery.includes('receita') || lowerQuery.includes('cozinhar') || lowerQuery.includes('prato')) {
+          const lines = cleanedReply.split('\n');
+          const extractedIngredients = lines
+            .filter(line => line.trim().startsWith('-') || line.trim().startsWith('•'))
+            .map(line => line.replace(/^[-•]\s*/, '').trim())
+            .slice(0, 5);
+
           suggestionData = {
             type: 'recipe',
-            title: 'Sugestão Personalizada da IA',
-            description: 'Receita gerada com base nos alimentos da sua dispensa.',
+            title: '2 Sugestões de Receitas (NutriSmart IA)',
+            description: 'Opções personalizadas com base nos seus ingredientes.',
             content: {
-              instructions: data.reply
+              ingredients: extractedIngredients.length > 0 ? extractedIngredients : ['Ver detalhes na resposta'],
+              instructions: cleanedReply
             }
           };
         } else if (lowerQuery.includes('cardápio') || lowerQuery.includes('semanal') || lowerQuery.includes('plano')) {
+          let formattedSummary = cleanedReply;
+          const dayStartIndex = cleanedReply.search(/(Dia \d|Segunda|Terça|Quarta|Quinta|Sexta|Sábado|Domingo)/i);
+
+          if (dayStartIndex !== -1) {
+            formattedSummary = cleanedReply.substring(dayStartIndex).trim();
+          }
+
+          formattedSummary = formattedSummary
+            .replace(/(Dia \d[^\n:]*|Segunda-feira|Terça-feira|Quarta-feira|Quinta-feira|Sexta-feira|Sábado|Domingo)/gi, '\n\n📌 $1\n')
+            .replace(/(Café da manhã|Almoço|Jantar|Lanche\/ceia):/gi, '\n  • $1:')
+            .trim();
+
           suggestionData = {
             type: 'weekly_plan',
             title: 'Cardápio Semanal Personalizado',
-            description: 'Planejamento de 7 dias criado pela IA com o que você tem em casa.',
+            description: 'Planejamento de refeições criado com o que você tem em casa.',
             content: {
-              summary: data.reply
-            }
-          };
-        } else if (lowerQuery.includes('compras') || lowerQuery.includes('lista') || lowerQuery.includes('comprar')) {
-          suggestionData = {
-            type: 'shopping_list',
-            title: 'Lista de Compras Recomendada',
-            description: 'Itens sugeridos pela IA para completar suas refeições.',
-            content: {
-              summary: data.reply
+              summary: formattedSummary,
+              highlights: [
+                'Planejamento adaptado às suas restrições alimentares',
+                'Foco no aproveitamento dos itens da sua dispensa',
+                'Refeições práticas e balanceadas'
+              ]
             }
           };
         }
@@ -161,7 +194,7 @@ export const AiAssistantDrawer: React.FC<AiAssistantDrawerProps> = ({
       const aiResponse: ChatMessage = {
         id: `ai-${Date.now()}`,
         sender: 'ai',
-        text: data.reply || 'Aqui está a sugestão nutricional para você:',
+        text: cleanedReply || 'Aqui estão as sugestões para você:',
         timestamp: timeStr,
         suggestionData
       };
@@ -173,7 +206,7 @@ export const AiAssistantDrawer: React.FC<AiAssistantDrawerProps> = ({
       const errorResponse: ChatMessage = {
         id: `ai-err-${Date.now()}`,
         sender: 'ai',
-        text: 'Desculpe, tive um problema ao consultar o servidor da IA. Verifique se o servidor está rodando e tente novamente!',
+        text: 'Desculpe, tive um problema ao consultar o servidor da IA com Groq. Verifique se o servidor está rodando e tente novamente!',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, errorResponse]);
@@ -244,13 +277,12 @@ export const AiAssistantDrawer: React.FC<AiAssistantDrawerProps> = ({
 
               <div className={`max-w-[85%] space-y-2 ${isAI ? '' : 'items-end'}`}>
                 <div className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-2xs ${isAI
-                    ? 'bg-white text-[#1F2E1E] border border-[#EFE6D1] rounded-tl-xs'
-                    : 'bg-[#0C6816] text-white rounded-tr-xs'
+                  ? 'bg-white text-[#1F2E1E] border border-[#EFE6D1] rounded-tl-xs whitespace-pre-line'
+                  : 'bg-[#0C6816] text-white rounded-tr-xs'
                   }`}>
                   <p>{msg.text}</p>
                 </div>
 
-                {/* Card de Resposta da IA com os Detalhes */}
                 {isAI && msg.suggestionData && (
                   <div className="bg-white border border-[#63D753]/60 rounded-2xl p-4 space-y-3 shadow-sm">
                     <div className="flex items-center justify-between">
@@ -272,14 +304,19 @@ export const AiAssistantDrawer: React.FC<AiAssistantDrawerProps> = ({
                     <div className="bg-[#FAF7EE] p-3 rounded-xl border border-[#EFE6D1] space-y-2 text-xs text-[#1F2E1E]">
                       {msg.suggestionData.type === 'recipe' && (
                         <>
-                          <p className="font-bold text-[#0C6816]">Ingredientes:</p>
-                          <ul className="list-disc list-inside space-y-0.5 text-[11px]">
-                            {msg.suggestionData.content.ingredients?.map((ing: string, i: number) => (
-                              <li key={i}>{ing}</li>
-                            ))}
-                          </ul>
-                          <p className="font-bold text-[#0C6816] pt-1">Modo de Preparo:</p>
-                          <p className="text-[11px] leading-relaxed">
+                          {msg.suggestionData.content.ingredients && msg.suggestionData.content.ingredients.length > 0 && (
+                            <>
+                              <p className="font-bold text-[#0C6816]">Ingredientes Principais:</p>
+                              <ul className="list-disc list-inside space-y-0.5 text-[11px] text-[#1F2E1E]">
+                                {msg.suggestionData.content.ingredients.map((ing: string, i: number) => (
+                                  <li key={i}>{ing}</li>
+                                ))}
+                              </ul>
+                            </>
+                          )}
+
+                          <p className="font-bold text-[#0C6816] pt-1">Instruções / Receita:</p>
+                          <p className="text-[11px] leading-relaxed whitespace-pre-line text-[#1F2E1E]">
                             {msg.suggestionData.content.instructions}
                           </p>
                         </>
@@ -312,8 +349,8 @@ export const AiAssistantDrawer: React.FC<AiAssistantDrawerProps> = ({
                       onClick={() => handleSaveSuggestion(msg)}
                       disabled={isSaved}
                       className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${isSaved
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-[#0C6816] hover:bg-[#095011] text-white shadow-xs active:scale-95'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-[#0C6816] hover:bg-[#095011] text-white shadow-xs active:scale-95'
                         }`}
                     >
                       {isSaved ? (
@@ -384,7 +421,7 @@ export const AiAssistantDrawer: React.FC<AiAssistantDrawerProps> = ({
           e.preventDefault();
           handleSendMessage();
         }}
-        className="p-3 bg-white border-t border-[#EFE6D1] flex items-center gap-2 shrink-0"
+        className="p-3 bg-[#white] border-t border-[#EFE6D1] flex items-center gap-2 shrink-0"
       >
         <input
           type="text"

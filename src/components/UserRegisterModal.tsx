@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Check, LogOut, ShieldAlert, FileText } from 'lucide-react';
+import { X, User, Check, LogOut, ShieldAlert, FileText, Calendar } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface UserRegisterModalProps {
@@ -120,33 +120,24 @@ export const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-[#0C6816] mb-1">Data de Nascimento</label>
-                <input
-                  type="text"
-                  placeholder="DD/MM/AAAA"
-                  value={formData.birthDate || ''}
-                  onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
-                  className="w-full px-4 py-3 bg-[#FAF7EE] border border-[#EFE6D1] focus:border-[#63D753] rounded-xl text-xs text-[#1F2E1E] outline-hidden"
-                />
+                <div className="relative">
+                  <Calendar className="w-4 h-4 text-[#5E6B52] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="date"
+                    value={formData.birthDate || ''}
+                    onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 bg-[#FAF7EE] border border-[#EFE6D1] focus:border-[#63D753] rounded-xl text-xs text-[#1F2E1E] outline-hidden"
+                  />
+                </div>
               </div>
 
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-xs font-bold text-[#0C6816] mb-1">E-mail *</label>
                 <input
                   type="email"
                   required
                   value={formData.email}
                   onChange={e => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-3 bg-[#FAF7EE] border border-[#EFE6D1] focus:border-[#63D753] rounded-xl text-xs text-[#1F2E1E] outline-hidden"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#0C6816] mb-1">Senha de Acesso</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.password || ''}
-                  onChange={e => setFormData({ ...formData, password: e.target.value })}
                   className="w-full px-4 py-3 bg-[#FAF7EE] border border-[#EFE6D1] focus:border-[#63D753] rounded-xl text-xs text-[#1F2E1E] outline-hidden"
                 />
               </div>
