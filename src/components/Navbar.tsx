@@ -3,12 +3,7 @@ import {
   Apple, 
   Sparkles, 
   CalendarDays, 
-  Users, 
-  Trophy, 
-  Flame, 
-  Award,
   PackageCheck,
-  ShoppingCart,
   UserCheck,
   LogOut,
   User
@@ -42,7 +37,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'receitas', label: 'Receitas com IA', icon: Sparkles, highlight: true },
     { id: 'cardapio', label: 'Sugestões & Salvos', icon: CalendarDays },
     { id: 'nutricionistas', label: 'Nutricionistas', icon: Apple },
-
   ];
 
   return (
@@ -78,10 +72,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* User Status Bar & Quick Actions */}
           <div className="flex items-center gap-2 sm:gap-4">
             
-            {/* User Profile Avatar & Logout (Ocultos em telas menores / mobile) */}
+            {/* User Profile Avatar & Logout */}
             <div className="hidden md:flex items-center gap-2 sm:gap-4 pl-2 border-l border-[#EFE6D1]">
               
-              {/* User Profile Avatar / Cadastro Button */}
+              {/* User Profile Button - Apenas o Nome do Utilizador */}
               <button 
                 onClick={onOpenUserProfile}
                 className="flex items-center gap-2 cursor-pointer group bg-transparent text-left"
@@ -89,19 +83,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title="Editar Perfil, Cadastro e Restrições Alimentares"
               >
                 <div className="relative">
-                  {/* Ícone Genérico em vez da foto de perfil */}
                   <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#D0F4A4] border-2 border-[#63D753] group-hover:border-[#0C6816] flex items-center justify-center text-[#0C6816] transition-all">
                     <User className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </div>
                 <div className="hidden lg:block text-left">
                   <div className="flex items-center gap-1">
-                    <p className="text-xs font-bold text-[#0C6816] leading-tight group-hover:text-[#63D753] transition-colors">{user.name}</p>
+                    <p className="text-xs font-bold text-[#0C6816] leading-tight group-hover:text-[#63D753] transition-colors">
+                      {user.name}
+                    </p>
                     <UserCheck className="w-3 h-3 text-[#63D753]" />
                   </div>
-                  <p className="text-[10px] text-[#5E6B52] font-medium leading-tight">
-                    {user.diet} {user.dietaryRestrictions?.length > 0 ? `• ${user.dietaryRestrictions[0]}` : ''}
-                  </p>
                 </div>
               </button>
 
@@ -123,7 +115,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Desktop Navigation Tabs (Hidden on mobile to avoid horizontal clutter) */}
+      {/* Desktop Navigation Tabs */}
       <div className="hidden md:block bg-[#FAF7EE] border-t border-[#EFE6D1]/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex space-x-1 sm:space-x-2 overflow-x-auto py-2 scrollbar-none" aria-label="Tabs">

@@ -204,13 +204,6 @@ export const PantryView: React.FC<PantryViewProps> = ({
               <span>Cadastrar Alimento</span>
             </button>
 
-            <button
-              onClick={handleRunAIAnalysis}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 border border-white/20 text-white font-semibold px-4 py-2.5 min-h-[44px] rounded-xl transition-all active:scale-95 cursor-pointer text-xs sm:text-sm"
-            >
-              <Sparkles className="w-4 h-4 text-[#D0F4A4]" />
-              <span>Diagnóstico com IA</span>
-            </button>
           </div>
         </div>
 

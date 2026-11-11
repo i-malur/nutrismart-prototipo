@@ -3,17 +3,18 @@ import {
   Search, 
   ChefHat, 
   Clock, 
-  BookOpen, 
   Flame, 
   CheckCircle2, 
   XCircle, 
   FilterX, 
   ShieldAlert,
   Bookmark,
-  BookmarkCheck,
-  Check
+  Check,
+  Plus,
+  Sparkles
 } from 'lucide-react';
 import { Recipe, PantryItem, UserProfile } from '../types';
+import { RecipeRegisterForm } from './RecipeRegisterForm'; // Import do formulário de cadastro
 
 interface RecipesViewProps {
   recipes: Recipe[];
@@ -30,15 +31,17 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
   user,
   userName = 'Usuário',
   onAddRecipe,
-  onSaveToLibrary
+  onSaveToLibrary,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [excludedIngredientsText, setExcludedIngredientsText] = useState('');
   const [selectedTag, setSelectedTag] = useState('Todas');
   const [selectedRecipeModal, setSelectedRecipeModal] = useState<Recipe | null>(null);
   const [savedRecipeIds, setSavedRecipeIds] = useState<string[]>([]);
+  
+  // Estado para controlar a abertura da modal de cadastro de receita
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
-  // Parse dos termos a serem excluídos (separados por ;)
   const excludedTerms = useMemo(() => {
     if (!excludedIngredientsText.trim()) return [];
     return excludedIngredientsText
@@ -47,18 +50,15 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
       .filter(term => term.length > 0);
   }, [excludedIngredientsText]);
 
-  // Normalizador de texto para comparações
   const normalizeText = (text: string) => 
     text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-  // Lógica principal de filtragem das receitas
   const filteredRecipes = useMemo(() => {
     return recipes.filter(recipe => {
       const fullText = normalizeText(
         `${recipe.title} ${recipe.description} ${recipe.ingredients.map(i => i.name).join(' ')} ${recipe.tags.join(' ')}`
       );
 
-      // 1. Filtrar por Restrições do Perfil (Chips + Texto Livre)
       if (user) {
         const userRestrictions = user.dietaryRestrictions || [];
         const isGlutenFreeRequired = userRestrictions.includes('Sem Glúten');
@@ -83,19 +83,16 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
         }
       }
 
-      // 2. Filtro de exclusão manual por caixinha (Termos separados por ;)
       if (excludedTerms.length > 0) {
         const containsExcludedTerm = excludedTerms.some(term => fullText.includes(normalizeText(term)));
         if (containsExcludedTerm) return false;
       }
 
-      // 3. Filtro por busca textual simples (Nome ou ingrediente)
       if (searchTerm.trim()) {
         const searchNorm = normalizeText(searchTerm.trim());
         if (!fullText.includes(searchNorm)) return false;
       }
 
-      // 4. Filtro por Categoria / Tag selecionada
       if (selectedTag !== 'Todas') {
         if (!recipe.tags.includes(selectedTag)) return false;
       }
@@ -123,32 +120,45 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
     }
   };
 
+  const handleCreateSubmit = (newRecipe: Recipe) => {
+    if (onAddRecipe) {
+      onAddRecipe(newRecipe);
+    }
+    setIsRegisterModalOpen(false);
+  };
+
   return (
     <div className="space-y-6">
 
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-[#0C6816] via-[#147a22] to-[#0C6816] rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
-        <div className="relative z-10 space-y-2">
+      {/* Header Banner com Botão de Abertura do Formulário */}
+      <div className="bg-gradient-to-r from-[#0C6816] via-[#147a22] to-[#0C6816] rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="relative z-10 space-y-2 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D0F4A4]/20 border border-[#D0F4A4]/30 text-[#D0F4A4] text-xs font-semibold">
-            <BookOpen className="w-4 h-4 text-[#63D753]" />
-            <span>Caderno Nutricional Personalizado</span>
+            <Sparkles className="w-3.5 h-3.5 text-[#63D753]" />
+            <span>Sugestões Inteligentes & Autorais</span>
           </div>
 
           <h1 className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight">
             Receitas & Inspirações
           </h1>
-          <p className="text-white/80 text-xs sm:text-sm max-w-2xl leading-relaxed">
+          <p className="text-white/80 text-xs sm:text-sm leading-relaxed">
             Explore receitas compatíveis com as suas restrições cadastradas e com o que tem na dispensa.
           </p>
         </div>
+
+        {/* Botão que ABRE o Formulário Real de Cadastro */}
+        <button
+          onClick={() => setIsRegisterModalOpen(true)}
+          className="relative z-10 w-full sm:w-auto px-5 py-3.5 bg-[#63D753] hover:bg-[#52c443] text-[#0C6816] font-extrabold text-xs sm:text-sm rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer active:scale-95"
+        >
+          <Plus className="w-4 h-4 stroke-[3]" />
+          <span>Cadastrar Nova Receita</span>
+        </button>
       </div>
 
       {/* Caixa de Busca e Filtro de Exclusão (com ;) */}
       <div className="bg-white border border-[#EFE6D1] rounded-3xl p-4 sm:p-5 shadow-2xs space-y-4">
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          
-          {/* Busca Geral */}
           <div className="relative">
             <Search className="w-4 h-4 text-[#5E6B52] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -160,7 +170,6 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
             />
           </div>
 
-          {/* Caixinha de Exclusão por Ponto e Vírgula */}
           <div className="relative">
             <FilterX className="w-4 h-4 text-rose-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -171,10 +180,8 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
               className="w-full pl-10 pr-4 py-2.5 bg-rose-50/50 border border-rose-200 focus:border-rose-400 rounded-2xl text-xs text-rose-900 outline-hidden placeholder:text-rose-400/80"
             />
           </div>
-
         </div>
 
-        {/* Badges de Termos Excluídos Ativos */}
         {excludedTerms.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
             <span className="text-[11px] font-bold text-rose-700">Excluindo receitas com:</span>
@@ -189,7 +196,6 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
           </div>
         )}
 
-        {/* Tags de Categoria / Filtros Rápidos */}
         <div className="flex items-center justify-between pt-2 border-t border-[#EFE6D1] flex-wrap gap-2">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
             {['Todas', 'Zero Desperdício', 'Sem Glúten', 'Sem Lactose', 'Vegetariana', 'Proteica'].map(tag => (
@@ -211,7 +217,6 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
             Exibindo <strong className="text-[#0C6816]">{filteredRecipes.length}</strong> de {recipes.length} receitas
           </span>
         </div>
-
       </div>
 
       {/* Indicador de Filtro Ativo por Restrições do Perfil */}
@@ -265,7 +270,6 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
                     {recipe.description}
                   </p>
 
-                  {/* Tags sem o '#' */}
                   <div className="flex flex-wrap gap-1 pt-1">
                     {recipe.tags.map(t => (
                       <span key={t} className="text-[10px] font-semibold bg-[#FAF7EE] text-[#5E6B52] px-2.5 py-1 rounded-lg border border-[#EFE6D1]">
@@ -275,7 +279,6 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
                   </div>
                 </div>
 
-                {/* Footer do Card com Botão de Salvar e Ver Receita */}
                 <div className="pt-3 border-t border-[#EFE6D1] flex items-center justify-between">
                   <span className="text-xs text-[#5E6B52] flex items-center gap-1">
                     <Flame className="w-3.5 h-3.5 text-amber-500" />
@@ -304,11 +307,21 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
                     </button>
                   </div>
                 </div>
-
               </div>
             );
           })}
         </div>
+      )}
+
+      {/* Modal de Cadastro de Nova Receita */}
+      {isRegisterModalOpen && (
+        <RecipeRegisterForm
+          isOpen={isRegisterModalOpen}
+          onClose={() => setIsRegisterModalOpen(false)}
+          onAddRecipe={handleCreateSubmit}
+          pantryItems={pantryItems}
+          authorName={userName}
+        />
       )}
 
       {/* Modal de Detalhes da Receita */}
