@@ -54,6 +54,16 @@ export default function App() {
   const [recipes, setRecipes] = useState<Recipe[]>(initialRecipes);
   const [nutritionists, setNutritionists] = useState<Nutritionist[]>(initialNutritionists);
 
+  // ESTADO GLOBAL DE ITENS SALVOS (COM SUPORTE A LOCALSTORAGE)
+  const [savedItems, setSavedItems] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('nutrismart_saved_items');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   // Modals & Drawers
   const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -63,6 +73,43 @@ export default function App() {
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3500);
+  };
+
+  // FUNÇÃO PARA ADICIONAR ITEM AOS SALVOS E ATUALIZAR O LOCALSTORAGE
+  const handleSaveToLibrary = (newItem: { type: string; title: string; description: string; content: any }) => {
+    const itemToSave = {
+      id: `save-${Date.now()}`,
+      type: newItem.type,
+      title: newItem.title,
+      description: newItem.description,
+      createdAt: new Date().toLocaleDateString('pt-BR'),
+      content: newItem.content
+    };
+
+    setSavedItems(prev => {
+      const updated = [itemToSave, ...prev];
+      try {
+        localStorage.setItem('nutrismart_saved_items', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+
+    showToast(`📌 "${newItem.title}" foi salvo em Sugestões & Salvos!`);
+  };
+
+  const handleDeleteSavedItem = (id: string) => {
+    setSavedItems(prev => {
+      const updated = prev.filter(item => item.id !== id);
+      try {
+        localStorage.setItem('nutrismart_saved_items', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+    showToast('🗑️ Item removido dos seus salvos.');
   };
 
   const handleLogin = (user: UserProfile) => {
@@ -137,7 +184,6 @@ export default function App() {
     showToast(`📖 "${newRecipe.title}" salva no seu caderno pessoal!`);
   };
 
-  // Se o usuário não estiver autenticado, exibe a tela cheia de Login & Cadastro
   if (!isAuthenticated) {
     return (
       <AuthScreen
@@ -181,8 +227,10 @@ export default function App() {
           <RecipesView
             recipes={recipes}
             pantryItems={pantryItems}
+            user={userProfile}
             userName={userProfile.name}
             onAddRecipe={handleAddRecipe}
+            onSaveToLibrary={handleSaveToLibrary}
           />
         )}
 
@@ -190,9 +238,9 @@ export default function App() {
           <SavedItemsView
             user={userProfile}
             pantryItems={pantryItems}
-            onGenerateRecipes={() => setActiveTab('receitas')}
-            onGenerateMealPlan={() => showToast('🤖 IA gerando sugestão de Cardápio Semanal...')}
-            onGenerateShoppingList={() => showToast('🛒 IA gerando sugestão de Lista de Compras...')}
+            items={savedItems}
+            userRecipes={recipes.filter(r => r.isUserCreated)}
+            onDeleteItem={handleDeleteSavedItem}
           />
         )}
 
@@ -237,6 +285,7 @@ export default function App() {
         onClose={() => setIsAiAssistantOpen(false)}
         user={userProfile}
         pantryItems={pantryItems}
+        onSaveToLibrary={handleSaveToLibrary}
       />
 
       {/* Mobile-First Bottom Navigation */}

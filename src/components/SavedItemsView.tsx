@@ -8,9 +8,11 @@ import {
   Trash2, 
   Eye, 
   Clock, 
-  X
+  X,
+  BookOpen,
+  Plus
 } from 'lucide-react';
-import { UserProfile, PantryItem } from '../types';
+import { UserProfile, PantryItem, Recipe } from '../types';
 
 export interface SavedItem {
   id: string;
@@ -19,11 +21,16 @@ export interface SavedItem {
   description: string;
   createdAt: string;
   content: any;
+  isUserCreated?: boolean;
 }
 
 interface SavedItemsViewProps {
   user?: UserProfile;
   pantryItems?: PantryItem[];
+  items?: SavedItem[];
+  userRecipes?: Recipe[];
+  onDeleteItem?: (id: string) => void;
+  onOpenCreateRecipeModal?: () => void;
 }
 
 const INITIAL_SAVED_ITEMS: SavedItem[] = [
@@ -65,19 +72,23 @@ const INITIAL_SAVED_ITEMS: SavedItem[] = [
 export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
   user,
   pantryItems = [],
+  items = INITIAL_SAVED_ITEMS,
+  userRecipes = [],
+  onDeleteItem,
+  onOpenCreateRecipeModal,
 }) => {
-  const [savedItems, setSavedItems] = useState<SavedItem[]>(INITIAL_SAVED_ITEMS);
+  const [activeMainTab, setActiveMainTab] = useState<'caderno' | 'salvos_ia'>('caderno');
   const [activeFilter, setActiveFilter] = useState<'all' | 'recipe' | 'weekly_plan' | 'shopping_list'>('all');
   const [selectedItemModal, setSelectedItemModal] = useState<SavedItem | null>(null);
 
-  const filteredItems = savedItems.filter(item => {
+  // Filtra itens da IA
+  const filteredIaItems = items.filter(item => {
     if (activeFilter === 'all') return true;
     return item.type === activeFilter;
   });
 
-  const handleDeleteItem = (id: string) => {
-    setSavedItems(prev => prev.filter(item => item.id !== id));
-  };
+  // Receitas do Caderno (Salvas + Cadastradas pelo usuário)
+  const savedRecipes = items.filter(item => item.type === 'recipe');
 
   const getTypeBadge = (type: SavedItem['type']) => {
     switch (type) {
@@ -108,7 +119,7 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
   return (
     <div className="space-y-6">
 
-      {/* Banner Superior Limpo sem Botões */}
+      {/* Banner Superior Limpo */}
       <div className="bg-gradient-to-r from-[#0C6816] via-[#147a22] to-[#0C6816] rounded-3xl p-5 sm:p-8 text-white shadow-lg relative overflow-hidden">
         <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-[#63D753]/20 blur-2xl pointer-events-none" />
         
@@ -120,125 +131,245 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
 
           <div>
             <h1 className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight">
-              Seus Itens Salvos
+              Caderno de Receitas & Itens Salvos
             </h1>
             <p className="text-white/80 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-              Consulte e gira todas as receitas, cardápios e listas de compras que guardou na sua conta.
+              Consulte suas receitas autorais, receitas salvas e os planejamentos gerados pela IA.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Filtros da Biblioteca de Salvos */}
-      <div className="bg-white border border-[#EFE6D1] rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Bookmark className="w-5 h-5 text-[#0C6816]" />
-          <h2 className="font-display font-bold text-base text-[#0C6816]">
-            Meus Salvos ({savedItems.length})
-          </h2>
-        </div>
+      {/* NAVEGAÇÃO PRINCIPAL DAS DUAS SEÇÕES */}
+      <div className="bg-white border border-[#EFE6D1] rounded-2xl p-2 shadow-2xs flex items-center gap-2">
+        <button
+          onClick={() => setActiveMainTab('caderno')}
+          className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeMainTab === 'caderno'
+              ? 'bg-[#0C6816] text-white shadow-xs'
+              : 'bg-transparent text-[#5E6B52] hover:bg-[#FAF7EE] hover:text-[#0C6816]'
+          }`}
+        >
+          <BookOpen className="w-4 h-4 text-[#63D753]" />
+          <span>📖 Caderno de Receitas ({savedRecipes.length + userRecipes.length})</span>
+        </button>
 
-        {/* Abas de Filtro */}
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
-          <button
-            onClick={() => setActiveFilter('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-              activeFilter === 'all'
-                ? 'bg-[#0C6816] text-white'
-                : 'bg-[#FAF7EE] text-[#5E6B52] hover:bg-[#EFE6D1]'
-            }`}
-          >
-            Todos ({savedItems.length})
-          </button>
-          <button
-            onClick={() => setActiveFilter('recipe')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-              activeFilter === 'recipe'
-                ? 'bg-[#0C6816] text-white'
-                : 'bg-[#FAF7EE] text-[#5E6B52] hover:bg-[#EFE6D1]'
-            }`}
-          >
-            Receitas
-          </button>
-          <button
-            onClick={() => setActiveFilter('weekly_plan')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-              activeFilter === 'weekly_plan'
-                ? 'bg-[#0C6816] text-white'
-                : 'bg-[#FAF7EE] text-[#5E6B52] hover:bg-[#EFE6D1]'
-            }`}
-          >
-            Cardápios
-          </button>
-          <button
-            onClick={() => setActiveFilter('shopping_list')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-              activeFilter === 'shopping_list'
-                ? 'bg-[#0C6816] text-white'
-                : 'bg-[#FAF7EE] text-[#5E6B52] hover:bg-[#EFE6D1]'
-            }`}
-          >
-            Listas
-          </button>
-        </div>
+        <button
+          onClick={() => setActiveMainTab('salvos_ia')}
+          className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeMainTab === 'salvos_ia'
+              ? 'bg-[#0C6816] text-white shadow-xs'
+              : 'bg-transparent text-[#5E6B52] hover:bg-[#FAF7EE] hover:text-[#0C6816]'
+          }`}
+        >
+          <Bookmark className="w-4 h-4 text-[#D0F4A4]" />
+          <span>📌 Sugestões & Salvos da IA ({items.length})</span>
+        </button>
       </div>
 
-      {/* Grid de Cards Salvos */}
-      {filteredItems.length === 0 ? (
-        <div className="bg-white border border-[#EFE6D1] rounded-3xl p-12 text-center max-w-md mx-auto space-y-3">
-          <div className="w-14 h-14 rounded-full bg-[#FAF7EE] text-[#0C6816] mx-auto flex items-center justify-center">
-            <Bookmark className="w-6 h-6" />
-          </div>
-          <h3 className="font-display font-bold text-base text-[#0C6816]">Nenhum item salvo encontrado</h3>
-          <p className="text-xs text-[#5E6B52]">
-            Guarde receitas e listas no aplicativo para consultar nesta tela sempre que precisar.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredItems.map(item => (
-            <div
-              key={item.id}
-              className="bg-white rounded-3xl border border-[#EFE6D1] hover:border-[#63D753] transition-all p-5 shadow-2xs hover:shadow-md flex flex-col justify-between space-y-4"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  {getTypeBadge(item.type)}
-                  <span className="text-[10px] text-[#5E6B52] flex items-center gap-1 font-medium">
-                    <Clock className="w-3 h-3" />
-                    {item.createdAt}
-                  </span>
-                </div>
-
-                <h3 className="font-display font-bold text-sm sm:text-base text-[#0C6816] leading-snug">
-                  {item.title}
-                </h3>
-
-                <p className="text-xs text-[#5E6B52] leading-relaxed">
-                  {item.description}
-                </p>
-              </div>
-
-              {/* Ações do Card */}
-              <div className="pt-3 border-t border-[#EFE6D1] flex items-center justify-between">
-                <button
-                  onClick={() => setSelectedItemModal(item)}
-                  className="flex items-center gap-1.5 text-xs font-bold text-[#0C6816] hover:underline cursor-pointer"
-                >
-                  <Eye className="w-4 h-4 text-[#63D753]" />
-                  <span>Visualizar Detalhes</span>
-                </button>
-
-                <button
-                  onClick={() => handleDeleteItem(item.id)}
-                  className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                  title="Remover dos Salvos"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+      {/* ========================================================================= */}
+      {/* ABA 1: CADERNO DE RECEITAS (RECEITAS CADASTRADAS + RECEITAS SALVAS)       */}
+      {/* ========================================================================= */}
+      {activeMainTab === 'caderno' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-[#EFE6D1]">
+            <div>
+              <h2 className="font-display font-bold text-base text-[#0C6816]">
+                Minhas Receitas & Favoritas
+              </h2>
+              <p className="text-xs text-[#5E6B52]">Receitas autorais e salvas para o seu dia a dia.</p>
             </div>
-          ))}
+
+            {onOpenCreateRecipeModal && (
+              <button
+                onClick={onOpenCreateRecipeModal}
+                className="px-4 py-2.5 bg-[#0C6816] hover:bg-[#095011] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Plus className="w-4 h-4 text-[#63D753]" />
+                <span>Nova Receita</span>
+              </button>
+            )}
+          </div>
+
+          {savedRecipes.length === 0 && userRecipes.length === 0 ? (
+            <div className="bg-white border border-[#EFE6D1] rounded-3xl p-12 text-center max-w-md mx-auto space-y-3">
+              <div className="w-14 h-14 rounded-full bg-[#FAF7EE] text-[#0C6816] mx-auto flex items-center justify-center">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-bold text-base text-[#0C6816]">Seu caderno está vazio</h3>
+              <p className="text-xs text-[#5E6B52]">
+                Cadastre suas próprias receitas ou salve receitas sugeridas pela IA para consultar aqui!
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Receitas Cadastradas pelo Usuário */}
+              {userRecipes.map(recipe => (
+                <div key={recipe.id} className="bg-white rounded-3xl border border-[#EFE6D1] p-5 shadow-2xs space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-bold bg-[#D0F4A4] text-[#0C6816] px-2 py-0.5 rounded-md uppercase tracking-wider">
+                      ✍️ Cadastrada por você
+                    </span>
+                    <h3 className="font-display font-bold text-base text-[#0C6816]">{recipe.title}</h3>
+                    <p className="text-xs text-[#5E6B52] leading-relaxed line-clamp-2">{recipe.description}</p>
+                  </div>
+                  <div className="pt-3 border-t border-[#EFE6D1] flex justify-between items-center text-xs">
+                    <span className="text-[#5E6B52]">{recipe.prepTimeMinutes} min</span>
+                    <span className="font-bold text-[#0C6816]">{recipe.calories} kcal</span>
+                  </div>
+                </div>
+              ))}
+
+              {/* Receitas Salvas da IA */}
+              {savedRecipes.map(item => (
+                <div key={item.id} className="bg-white rounded-3xl border border-[#EFE6D1] p-5 shadow-2xs space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    {getTypeBadge(item.type)}
+                    <h3 className="font-display font-bold text-base text-[#0C6816]">{item.title}</h3>
+                    <p className="text-xs text-[#5E6B52] leading-relaxed line-clamp-2">{item.description}</p>
+                  </div>
+                  <div className="pt-3 border-t border-[#EFE6D1] flex items-center justify-between">
+                    <button
+                      onClick={() => setSelectedItemModal(item)}
+                      className="flex items-center gap-1.5 text-xs font-bold text-[#0C6816] hover:underline cursor-pointer"
+                    >
+                      <Eye className="w-4 h-4 text-[#63D753]" />
+                      <span>Ver Detalhes</span>
+                    </button>
+                    {onDeleteItem && (
+                      <button onClick={() => onDeleteItem(item.id)} className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* ABA 2: SUGESTÕES & SALVOS DA IA (CARDÁPIOS, LISTAS E SUGESTÕES)           */}
+      {/* ========================================================================= */}
+      {activeMainTab === 'salvos_ia' && (
+        <div className="space-y-4">
+          
+          {/* Filtros da Biblioteca de Salvos */}
+          <div className="bg-white border border-[#EFE6D1] rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Bookmark className="w-5 h-5 text-[#0C6816]" />
+              <h2 className="font-display font-bold text-base text-[#0C6816]">
+                Itens Salvos da IA ({items.length})
+              </h2>
+            </div>
+
+            {/* Abas de Filtro */}
+            <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+              <button
+                onClick={() => setActiveFilter('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                  activeFilter === 'all'
+                    ? 'bg-[#0C6816] text-white'
+                    : 'bg-[#FAF7EE] text-[#5E6B52] hover:bg-[#EFE6D1]'
+                }`}
+              >
+                Todos ({items.length})
+              </button>
+              <button
+                onClick={() => setActiveFilter('recipe')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                  activeFilter === 'recipe'
+                    ? 'bg-[#0C6816] text-white'
+                    : 'bg-[#FAF7EE] text-[#5E6B52] hover:bg-[#EFE6D1]'
+                }`}
+              >
+                Receitas
+              </button>
+              <button
+                onClick={() => setActiveFilter('weekly_plan')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                  activeFilter === 'weekly_plan'
+                    ? 'bg-[#0C6816] text-white'
+                    : 'bg-[#FAF7EE] text-[#5E6B52] hover:bg-[#EFE6D1]'
+                }`}
+              >
+                Cardápios
+              </button>
+              <button
+                onClick={() => setActiveFilter('shopping_list')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                  activeFilter === 'shopping_list'
+                    ? 'bg-[#0C6816] text-white'
+                    : 'bg-[#FAF7EE] text-[#5E6B52] hover:bg-[#EFE6D1]'
+                }`}
+              >
+                Listas
+              </button>
+            </div>
+          </div>
+
+          {/* Grid de Cards Salvos */}
+          {filteredIaItems.length === 0 ? (
+            <div className="bg-white border border-[#EFE6D1] rounded-3xl p-12 text-center max-w-md mx-auto space-y-3">
+              <div className="w-14 h-14 rounded-full bg-[#FAF7EE] text-[#0C6816] mx-auto flex items-center justify-center">
+                <Bookmark className="w-6 h-6" />
+              </div>
+              <h3 className="font-display font-bold text-base text-[#0C6816]">Nenhum item salvo encontrado</h3>
+              <p className="text-xs text-[#5E6B52]">
+                Guarde sugestões da IA no assistente para consultar nesta tela!
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredIaItems.map(item => (
+                <div
+                  key={item.id}
+                  className="bg-white rounded-3xl border border-[#EFE6D1] hover:border-[#63D753] transition-all p-5 shadow-2xs hover:shadow-md flex flex-col justify-between space-y-4"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      {getTypeBadge(item.type)}
+                      <span className="text-[10px] text-[#5E6B52] flex items-center gap-1 font-medium">
+                        <Clock className="w-3 h-3" />
+                        {item.createdAt}
+                      </span>
+                    </div>
+
+                    <h3 className="font-display font-bold text-sm sm:text-base text-[#0C6816] leading-snug">
+                      {item.title}
+                    </h3>
+
+                    <p className="text-xs text-[#5E6B52] leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
+
+                  {/* Ações do Card */}
+                  <div className="pt-3 border-t border-[#EFE6D1] flex items-center justify-between">
+                    <button
+                      onClick={() => setSelectedItemModal(item)}
+                      className="flex items-center gap-1.5 text-xs font-bold text-[#0C6816] hover:underline cursor-pointer"
+                    >
+                      <Eye className="w-4 h-4 text-[#63D753]" />
+                      <span>Visualizar Detalhes</span>
+                    </button>
+
+                    {onDeleteItem && (
+                      <button
+                        onClick={() => onDeleteItem(item.id)}
+                        className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                        title="Remover dos Salvos"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
         </div>
       )}
 
