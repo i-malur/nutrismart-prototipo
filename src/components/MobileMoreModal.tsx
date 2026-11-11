@@ -1,15 +1,10 @@
 import React from 'react';
 import { 
-  CalendarDays, 
+  Bookmark, 
   Apple, 
-  Users, 
-  Trophy, 
   UserCheck, 
   X, 
   ChevronRight,
-  Sparkles,
-  Flame,
-  Award,
   LogOut,
   User
 } from 'lucide-react';
@@ -44,10 +39,10 @@ export const MobileMoreModal: React.FC<MobileMoreModalProps> = ({
   const moreItems: { id: TabType; label: string; desc: string; icon: React.ComponentType<{ className?: string }>; badge?: string }[] = [
     {
       id: 'cardapio',
-      label: 'Cardápio Semanal',
-      desc: 'Plano completo de 7 dias com 4 refeições diárias',
-      icon: CalendarDays,
-      badge: 'Nutri'
+      label: 'Sugestões & Salvos',
+      desc: 'Sua biblioteca de receitas, cardápios e listas salvas',
+      icon: Bookmark,
+      badge: 'Salvos'
     },
     {
       id: 'nutricionistas',
@@ -55,19 +50,6 @@ export const MobileMoreModal: React.FC<MobileMoreModalProps> = ({
       desc: 'Consulte profissionais credenciados com CRN ativo',
       icon: Apple,
       badge: 'CRN'
-    },
-    {
-      id: 'comunidade',
-      label: 'Comunidade & Feed',
-      desc: 'Troque dicas, receitas e motive-se com outros membros',
-      icon: Users,
-    },
-    {
-      id: 'desafios',
-      label: 'Desafios & Prêmios',
-      desc: 'Conquiste selos, acumule pontos e troque por descontos',
-      icon: Trophy,
-      badge: `${user.points} pts`
     },
   ];
 
@@ -79,7 +61,7 @@ export const MobileMoreModal: React.FC<MobileMoreModalProps> = ({
         {/* Pull handle indicator */}
         <div className="w-12 h-1.5 bg-[#EFE6D1] rounded-full mx-auto -mt-1 mb-2" />
 
-        {/* Modal Handle & Close Header */}
+        {/* Modal Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#EFE6D1]">
           <div className="flex items-center gap-2.5">
             <span className="w-1.5 h-4 bg-[#63D753] rounded-full" />
@@ -97,13 +79,12 @@ export const MobileMoreModal: React.FC<MobileMoreModalProps> = ({
           </button>
         </div>
 
-        {/* User Card Shortcut */}
+        {/* User Profile Card */}
         <div 
           onClick={() => { onOpenUserProfile(); onClose(); }}
           className="bg-gradient-to-r from-[#FAF7EE] to-[#EFE6D1]/40 border border-[#EFE6D1] p-3.5 rounded-2xl flex items-center justify-between cursor-pointer hover:border-[#63D753] transition-colors"
         >
           <div className="flex items-center gap-3">
-            {/* Ícone Genérico em vez da foto de perfil */}
             <div className="w-11 h-11 rounded-full bg-[#D0F4A4] border-2 border-[#63D753] flex items-center justify-center text-[#0C6816] shrink-0">
               <User className="w-5 h-5" />
             </div>
@@ -114,7 +95,7 @@ export const MobileMoreModal: React.FC<MobileMoreModalProps> = ({
                 <UserCheck className="w-3.5 h-3.5 text-[#63D753]" />
               </div>
               <p className="text-xs text-[#5E6B52]">
-                {user.diet} • {user.streakDays} dias seguidos 🔥
+                {user.email || 'Conta NutriSmart'}
               </p>
             </div>
           </div>

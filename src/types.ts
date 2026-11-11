@@ -25,10 +25,7 @@ export type TabType =
   | 'dispensa' 
   | 'receitas' 
   | 'cardapio' 
-  | 'compras'
-  | 'nutricionistas' 
-  | 'comunidade' 
-  | 'desafios';
+  | 'nutricionistas';
 
 export interface PantryItem {
   id: string;
@@ -197,6 +194,7 @@ export interface UserProfile {
   diet: string; // Ex: 'Equilibrada', 'Low Carb', 'Vegetariana', 'Vegana', 'Ganho de Massa'
   dietaryGoals: string[];
   dietaryRestrictions: string[]; // Ex: 'Sem Glúten', 'Sem Lactose', 'Sem Açúcar', 'Alergia a Amendoim'
+  customRestrictions?: string; // Texto livre para restrições específicas (ex: "Não como carne de porco", "evito coentro")
   allergies: string[];
   pantryUsageType: 'residencial' | 'comercial'; // Gestão de alimentos residencial ou negócio
   businessName?: string;

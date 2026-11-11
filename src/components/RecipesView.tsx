@@ -202,14 +202,6 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
               <span>Cadastre sua receita</span>
             </button>
 
-            <button
-              onClick={() => setIsGeneratorOpen(!isGeneratorOpen)}
-              id="open-ai-recipe-creator-btn"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#63D753] hover:bg-[#52c244] text-[#0C6816] font-extrabold px-5 py-2.5 min-h-[44px] rounded-xl shadow-md transition-all active:scale-95 cursor-pointer text-xs sm:text-sm"
-            >
-              <Sparkles className="w-4 h-4 text-[#0C6816]" />
-              <span>Criar Nova Receita com IA</span>
-            </button>
           </div>
         </div>
 
@@ -220,138 +212,6 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
           </div>
         )}
       </div>
-
-      {/* AI Recipe Generator Accordion Panel */}
-      {isGeneratorOpen && (
-        <div className="bg-white border-2 border-[#63D753] rounded-2xl p-6 shadow-md space-y-5 animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex items-center justify-between pb-3 border-b border-[#EFE6D1]">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#D0F4A4] flex items-center justify-center text-[#0C6816]">
-                <ChefHat className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-display font-bold text-base text-[#0C6816]">Gerador de Receitas Personalizado</h3>
-                <p className="text-xs text-[#5E6B52]">Selecione os alimentos da dispensa e informe suas preferências</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setIsGeneratorOpen(false)}
-              className="text-xs font-bold text-[#5E6B52] hover:text-[#0C6816]"
-            >
-              Fechar
-            </button>
-          </div>
-
-          {/* Pantry Ingredients Selector */}
-          <div>
-            <label className="block text-xs font-bold text-[#0C6816] mb-2">
-              Ingredientes da sua dispensa para priorizar:
-            </label>
-            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-[#FAF7EE] rounded-xl border border-[#EFE6D1]">
-              {pantryItems.map((item) => {
-                const isSelected = selectedPantryIds.includes(item.id);
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedPantryIds(prev => 
-                        prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id]
-                      );
-                    }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-[#0C6816] text-white shadow-2xs'
-                        : 'bg-white text-[#5E6B52] border border-[#EFE6D1] hover:border-[#63D753]'
-                    }`}
-                  >
-                    <span>{item.icon || '🥗'}</span>
-                    <span>{item.name}</span>
-                    {isSelected && <Check className="w-3 h-3 text-[#D0F4A4]" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Configuration Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-[#0C6816] mb-1">Objetivo / Dieta</label>
-              <select
-                value={generatorPreference}
-                onChange={(e) => setGeneratorPreference(e.target.value as DietaryPreference)}
-                className="w-full px-3 py-2 bg-[#FAF7EE] border border-[#EFE6D1] focus:border-[#63D753] rounded-xl text-xs text-[#0C6816] outline-hidden cursor-pointer"
-              >
-                {PREFERENCES.filter(p => p !== 'Todas').map(p => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#0C6816] mb-1">Tempo Máximo de Preparo</label>
-              <select
-                value={generatorMaxTime}
-                onChange={(e) => setGeneratorMaxTime(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-[#FAF7EE] border border-[#EFE6D1] focus:border-[#63D753] rounded-xl text-xs text-[#0C6816] outline-hidden cursor-pointer"
-              >
-                <option value={15}>⚡ 15 minutos (Express)</option>
-                <option value={25}>⏱️ 25 minutos (Rápido)</option>
-                <option value={40}>🍳 40 minutos (Elaborado)</option>
-                <option value={60}>🍲 60 minutos (Refeição Completa)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-[#0C6816] mb-1">Porções</label>
-              <select
-                value={generatorServings}
-                onChange={(e) => setGeneratorServings(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-[#FAF7EE] border border-[#EFE6D1] focus:border-[#63D753] rounded-xl text-xs text-[#0C6816] outline-hidden cursor-pointer"
-              >
-                <option value={1}>1 porção (Individual)</option>
-                <option value={2}>2 porções (Casal)</option>
-                <option value={4}>4 porções (Família)</option>
-                <option value={6}>6 porções (Meal Prep)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Custom Note */}
-          <div>
-            <label className="block text-xs font-bold text-[#0C6816] mb-1">Desejo Culinário Específico (Opcional)</label>
-            <input
-              type="text"
-              value={generatorCustomNote}
-              onChange={(e) => setGeneratorCustomNote(e.target.value)}
-              placeholder="Ex: Quero um prato cremoso, sem fritura, perfeito para o jantar..."
-              className="w-full px-3.5 py-2 bg-[#FAF7EE] border border-[#EFE6D1] focus:border-[#63D753] rounded-xl text-xs text-[#0C6816] outline-hidden"
-            />
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex justify-end pt-2">
-            <button
-              onClick={handleGenerateAI}
-              disabled={isGenerating}
-              className="flex items-center gap-2 bg-[#0C6816] hover:bg-[#095011] disabled:opacity-50 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer text-sm"
-            >
-              {isGenerating ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Criando Receitas com Gemini IA...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 text-[#D0F4A4]" />
-                  <span>Gerar 3 Receitas com IA</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Filter and Search Bar */}
       <div className="bg-white border border-[#EFE6D1] rounded-2xl p-4 shadow-2xs space-y-4">
@@ -398,15 +258,6 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
               <span>Acervo NutriSmart</span>
             </button>
           </div>
-
-          <button
-            onClick={() => setViewMode('register_recipe')}
-            id="btn-quick-register-recipe"
-            className="flex items-center gap-1.5 text-xs font-bold text-[#0C6816] bg-[#D0F4A4]/50 hover:bg-[#D0F4A4] px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>+ Cadastrar Receita</span>
-          </button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">

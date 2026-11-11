@@ -1,7 +1,6 @@
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 
@@ -11,7 +10,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3000;
 
 app.use(express.json({ limit: "10mb" }));
 
@@ -32,6 +30,15 @@ function getGeminiClient(): GoogleGenAI | null {
   });
 }
 
+// Função auxiliar para limpar markdown de respostas JSON da IA
+function cleanJsonText(text: string): string {
+  return text
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+}
+
 // Health check route
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", app: "NutriSmart", timestamp: new Date().toISOString() });
@@ -40,13 +47,21 @@ app.get("/api/health", (req, res) => {
 // 1. AI Recipe Suggestion Endpoint
 app.post("/api/ai/suggest-recipes", async (req, res) => {
   try {
-    const { pantryItems = [], preference = "Equilibrada", maxTime = 30, servings = 2, customNotes = "" } = req.body;
+    const { 
+      pantryItems = [], 
+      preference = "Equilibrada", 
+      maxTime = 30, 
+      servings = 2, 
+      customNotes = "",
+      dietaryRestrictions = [],
+      customRestrictions = [] 
+    } = req.body;
+    
     const ai = getGeminiClient();
-
     const pantryNames = pantryItems.map((item: any) => `${item.name} (${item.quantity} ${item.unit || 'un'})`).join(", ");
 
     if (!ai) {
-      // Fallback intelligent response if offline / without key
+      // Fallback inteligente caso a chave não esteja configurada ou offline
       return res.json({
         success: true,
         isFallback: true,
@@ -64,7 +79,7 @@ app.post("/api/ai/suggest-recipes", async (req, res) => {
             servings: Number(servings) || 2,
             tags: [preference, "Zero Desperdício", "Rápida"],
             pantryMatchPercent: 90,
-            imageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80",
+            imageUrl: "[https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80](https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80)",
             ingredients: pantryItems.slice(0, 5).map((p: any) => ({
               name: p.name,
               amount: `${p.quantity} ${p.unit || 'un'}`,
@@ -86,13 +101,18 @@ app.post("/api/ai/suggest-recipes", async (req, res) => {
     const prompt = `Você é o chef e nutricionista executivo sênior do aplicativo NutriSmart.
 Crie 3 receitas saudáveis, práticas e criativas em português do Brasil, priorizando ao máximo os ingredientes que o usuário tem na dispensa.
 
+REGRAS DE OURO:
+- NUNCA inclua ingredientes que violem as restrições alimentares do usuário!
+- Restrições Alimentares Selecionadas: ${JSON.stringify(dietaryRestrictions)}
+- Restrições Personalizadas (Texto Livre): ${JSON.stringify(customRestrictions)}
+
 Ingredientes disponíveis na dispensa do usuário:
 ${pantryNames || 'Ovos, Arroz integral, Tomates, Abobrinha, Azeite, Frango'}
 
-Preferência alimentar do usuário: ${preference}
+Preferência alimentar: ${preference}
 Tempo máximo de preparo: ${maxTime} minutos
 Número de porções: ${servings}
-Observações extras do usuário: ${customNotes || 'Nenhuma'}
+Observações extras: ${customNotes || 'Nenhuma'}
 
 Responda OBRIGATORIAMENTE em JSON válido, com a seguinte estrutura de array:
 [
@@ -109,7 +129,7 @@ Responda OBRIGATORIAMENTE em JSON válido, com a seguinte estrutura de array:
     "servings": ${servings},
     "tags": ["Low Carb", "Zero Desperdício"],
     "pantryMatchPercent": 95,
-    "imageUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80",
+    "imageUrl": "[https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80](https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80)",
     "ingredients": [
       { "name": "Nome do ingrediente", "amount": "Quantidade", "isInPantry": true }
     ],
@@ -118,19 +138,19 @@ Responda OBRIGATORIAMENTE em JSON válido, com a seguinte estrutura de array:
       "Passo 2 detalhado...",
       "Passo 3 detalhado..."
     ],
-    "chefTips": "Dica prática de chef ou nutricionista para conservar ou turbinar o sabor."
+    "chefTips": "Dica prática de chef para conservar ou turbinar o sabor."
   }
 ]`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+      model: "gemini-1.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
       },
     });
 
-    const responseText = response.text || "[]";
+    const responseText = cleanJsonText(response.text || "[]");
     let recipes = [];
     try {
       recipes = JSON.parse(responseText);
@@ -151,9 +171,15 @@ Responda OBRIGATORIAMENTE em JSON válido, com a seguinte estrutura de array:
 // 2. AI Weekly Meal Plan Generator
 app.post("/api/ai/generate-meal-plan", async (req, res) => {
   try {
-    const { goal = "Equilíbrio & Vitalidade", calorieTarget = 2000, pantryItems = [], days = 7 } = req.body;
+    const { 
+      goal = "Equilíbrio & Vitalidade", 
+      calorieTarget = 2000, 
+      pantryItems = [], 
+      dietaryRestrictions = [], 
+      customRestrictions = [] 
+    } = req.body;
+    
     const ai = getGeminiClient();
-
     const pantryList = pantryItems.map((i: any) => i.name).slice(0, 15).join(", ");
 
     if (!ai) {
@@ -166,6 +192,11 @@ app.post("/api/ai/generate-meal-plan", async (req, res) => {
 
     const prompt = `Você é o planejador nutricional com IA do aplicativo NutriSmart.
 Crie um cardápio semanal personalizado de 7 dias (Segunda a Domingo) para um usuário brasileiro.
+
+REGRAS DE SEGURANÇA ALIMENTAR:
+- Respeite rigorosamente as restrições alimentares do usuário: ${JSON.stringify(dietaryRestrictions)}
+- Respeite as restrições personalizadas em texto livre: ${JSON.stringify(customRestrictions)}
+
 Meta nutricional: ${goal}
 Calorias diárias estimadas: ${calorieTarget} kcal
 Alimentos disponíveis na dispensa para priorizar: ${pantryList || 'Ovos, arroz, feijão, frango, legumes, aveia, frutas'}
@@ -229,14 +260,14 @@ Retorne um array JSON com 7 dias, no formato exato:
 ]`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+      model: "gemini-1.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
       },
     });
 
-    const parsed = JSON.parse(response.text || "[]");
+    const parsed = JSON.parse(cleanJsonText(response.text || "[]"));
     res.json({ success: true, plan: parsed });
   } catch (error: any) {
     console.error("Error in /api/ai/generate-meal-plan:", error);
@@ -265,7 +296,7 @@ app.post("/api/ai/analyze-pantry", async (req, res) => {
     }
 
     const itemsSummary = pantryItems
-      .map((i: any) => `- ${i.name}: ${i.quantity} ${i.unit || ''} (Validade: ${i.expirationDate || 'N/A'}, restam ${i.daysLeft || '?'} dias)`)
+      .map((i: any) => `- ${i.name}: ${i.quantity} ${i.unit || ''} (Validade: ${i.expirationDate || 'Não informada'})`)
       .join("\n");
 
     const prompt = `Analise a dispensa do usuário e forneça um diagnóstico nutricional e anti-desperdício em português do Brasil:
@@ -282,14 +313,14 @@ Responda em JSON com o formato:
 }`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+      model: "gemini-1.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
       },
     });
 
-    const parsed = JSON.parse(response.text || "{}");
+    const parsed = JSON.parse(cleanJsonText(response.text || "{}"));
     res.json({ success: true, ...parsed });
   } catch (error: any) {
     console.error("Error in /api/ai/analyze-pantry:", error);
@@ -300,39 +331,32 @@ Responda em JSON com o formato:
 // 4. AI Nutrition & Cooking Assistant Chat
 app.post("/api/ai/assistant-chat", async (req, res) => {
   try {
-    const { message, chatHistory = [], userContext = {} } = req.body || {};
+    const { message, chatHistory = [], userContext = {}, pantryItems = [] } = req.body || {};
     const ai = getGeminiClient();
 
     if (!ai) {
       return res.json({
-        reply: "Olá! Sou o Assistente NutriSmart com IA. Para aproveitar ao máximo seus alimentos, tente combinar suas proteínas com vegetais frescos e fibras. Como posso ajudar com suas receitas ou rotina hoje?"
+        reply: "Olá! Sou a NutriSmart IA 🥗. Estou conectada à sua dispensa e às suas restrições. Como posso te ajudar com receitas ou rotina hoje?"
       });
     }
 
     const systemInstruction = `
-Você é o NutriSmart AI, um assistente virtual especialista em nutrição prática, culinária consciente e combate ao desperdício de alimentos no contexto brasileiro.
+Você é a NutriSmart IA, uma assistente virtual especialista em nutrição prática, culinária consciente e combate ao desperdício de alimentos no contexto brasileiro.
 
-### PERFIL E TOM DE VOZ
-- **Tom de voz:** Encorajador, acolhedor, prático e empático.
-- **Linguagem:** Clara, acessível, dinâmica e adaptada à rotina diária brasileira.
-- **Postura:** Consultivo e proativo. Não dê apenas respostas diretas; faça perguntas inteligentes para contextualizar receitas ou planos.
-
-### CONTEXTO DO USUÁRIO
+### PERFIL E DADOS DO USUÁRIO
 - **Nome:** ${userContext.name || 'Usuário'}
-- **Objetivos principais:** ${JSON.stringify(userContext.goals || ['Alimentação saudável e prática'])}
-- **Alergias e restrições alimentares:** ${JSON.stringify(userContext.allergies || ['Nenhuma declarada'])}
+- **Estilo de Alimentação:** ${userContext.diet || 'Equilibrada'}
+- **Restrições Alimentares Selecionadas:** ${JSON.stringify(userContext.dietaryRestrictions || [])}
+- **Restrições Personalizadas em Texto Livre:** ${JSON.stringify(userContext.customRestrictions || [])}
+- **Dispensa Atual do Usuário (${pantryItems.length} itens):**
+${pantryItems.map((i: any) => `- ${i.name}: ${i.quantity} ${i.unit || 'un'}`).join('\n')}
 
-### DIRETRIZES DE RESPOSTA
-1. **Segurança Alimentar em Primeiro Lugar:** Respeite rigorosamente as alergias e restrições alimentares informadas no contexto. Nunca sugira ingredientes proibidos para o usuário.
-2. **Combate ao Desperdício (Culinária Geladeira Cheia):** Ao criar receitas com base nos ingredientes do usuário, priorize o reaproveitamento integral dos alimentos e o uso de sobras de forma criativa.
-3. **Estrutura Prática de Receitas:** Quando sugerir pratos ou modos de preparo, inclua sempre:
-   - Tempo estimado de preparo.
-   - Nível de dificuldade (Fácil, Médio, Avançado).
-   - Substituições possíveis para ingredientes secundários.
-   - Dica NutriSmart (benefício nutricional ou conservação).
-4. **Formatação Limpa:** Use negritos para destacar pontos-chave, listas organizadas com hífens/bullet points e divisores quando necessário para facilitar a leitura rápida em dispositivos móveis. Não use formato .md para responder`;;
+### REGRAS RÍGIDAS DE ATUAÇÃO
+1. **Segurança Alimentar Absoluta:** Respeite estritamente as restrições alimentares e personalizadas. NUNCA sugira ingredientes proibidos ao usuário (ex.: se houver "Não como carne de porco", proíba derivados suínos).
+2. **Combate ao Desperdício:** Priorize o reaproveitamento dos itens da dispensa do usuário.
+3. **Escopo Profissional:** Não faça diagnósticos médicos. Se o usuário pedir orientações clínicas avançadas, recomende que consulte um nutricionista na aba "Nutricionistas".
+4. **Tom de Voz:** Acolhedor, prático, encorajador e direto ao ponto. Use negrito para destacar pontos-chave e bullet points.`;
 
-    // Converte o histórico e a mensagem em texto corrido estruturado para o modelo
     const formattedHistory = Array.isArray(chatHistory)
       ? chatHistory
           .map((h: any) => `${h.role === "assistant" ? "Assistente" : "Usuário"}: ${h.text || h.content || ""}`)
@@ -342,7 +366,7 @@ Você é o NutriSmart AI, um assistente virtual especialista em nutrição prát
     const prompt = `Histórico da Conversa:\n${formattedHistory}\n\nUsuário: ${message || "Olá"}`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
+      model: "gemini-1.5-flash",
       contents: prompt,
       config: {
         systemInstruction,
@@ -355,7 +379,6 @@ Você é o NutriSmart AI, um assistente virtual especialista em nutrição prát
   } catch (error: any) {
     console.error("Error in /api/ai/assistant-chat:", error);
     
-    // Retorna status 200 com mensagem amigável no JSON para evitar erro de HTML no front-end
     return res.status(200).json({ 
       reply: "Tive um problema ao processar sua solicitação com a IA. Por favor, tente novamente em alguns instantes.",
       error: error.message || "Erro interno no servidor de IA"
@@ -367,7 +390,6 @@ Você é o NutriSmart AI, um assistente virtual especialista em nutrição prát
 // CONFIGURAÇÃO DE AMBIENTE (PRODUÇÃO / LOCAL / VERCEL)
 // -----------------------------------------------------------
 
-// No final do server.ts:
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, "0.0.0.0", () => {
@@ -375,7 +397,6 @@ if (!process.env.VERCEL) {
   });
 }
 
-// Garantir compatibilidade total no runtime Serverless
 if (typeof module !== "undefined" && module.exports) {
   module.exports = app;
 }

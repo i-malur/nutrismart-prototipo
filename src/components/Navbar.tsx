@@ -40,11 +40,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const navItems: { id: TabType; label: string; icon: React.ComponentType<{ className?: string }>; badge?: number; highlight?: boolean; reward?: boolean }[] = [
     { id: 'dispensa', label: 'Dispensa Virtual', icon: PackageCheck, badge: pantryCount },
     { id: 'receitas', label: 'Receitas com IA', icon: Sparkles, highlight: true },
-    { id: 'cardapio', label: 'Cardápio Semanal', icon: CalendarDays },
-    { id: 'compras', label: 'Lista de Compras', icon: ShoppingCart, badge: shoppingCount > 0 ? shoppingCount : undefined },
+    { id: 'cardapio', label: 'Sugestões & Salvos', icon: CalendarDays },
     { id: 'nutricionistas', label: 'Nutricionistas', icon: Apple },
-    { id: 'comunidade', label: 'Comunidade', icon: Users },
-    { id: 'desafios', label: 'Desafios & Prêmios', icon: Trophy, reward: true },
+
   ];
 
   return (
@@ -80,24 +78,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* User Status Bar & Quick Actions */}
           <div className="flex items-center gap-2 sm:gap-4">
             
-            {/* Gamification Points & Streak */}
-            <div 
-              onClick={() => onSelectTab('desafios')}
-              className="flex items-center gap-1.5 sm:gap-2 bg-[#FAF7EE] border border-[#EFE6D1] hover:border-[#63D753] px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full cursor-pointer transition-colors shadow-2xs"
-              title="Ver Desafios e Loja de Prêmios"
-              id="header-gamification-pill"
-            >
-              <div className="flex items-center gap-1 text-[#0C6816] font-bold text-xs sm:text-sm">
-                <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 fill-orange-500 animate-pulse" />
-                <span>{user.streakDays}d</span>
-              </div>
-              <span className="w-0.5 h-3 bg-[#EFE6D1] rounded-full" />
-              <div className="flex items-center gap-1 text-[#0C6816] font-bold text-xs sm:text-sm">
-                <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
-                <span>{user.points} pts</span>
-              </div>
-            </div>
-
             {/* User Profile Avatar & Logout (Ocultos em telas menores / mobile) */}
             <div className="hidden md:flex items-center gap-2 sm:gap-4 pl-2 border-l border-[#EFE6D1]">
               
@@ -113,9 +93,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#D0F4A4] border-2 border-[#63D753] group-hover:border-[#0C6816] flex items-center justify-center text-[#0C6816] transition-all">
                     <User className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <span className="absolute -bottom-1 -right-1 bg-[#0C6816] text-[#D0F4A4] text-[8px] sm:text-[9px] font-black rounded-full w-3.5 h-3.5 sm:w-4 sm:h-4 flex items-center justify-center">
-                    {user.level}
-                  </span>
                 </div>
                 <div className="hidden lg:block text-left">
                   <div className="flex items-center gap-1">
@@ -123,7 +100,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <UserCheck className="w-3 h-3 text-[#63D753]" />
                   </div>
                   <p className="text-[10px] text-[#5E6B52] font-medium leading-tight">
-                    {user.diet} {user.dietaryRestrictions.length > 0 ? `• ${user.dietaryRestrictions[0]}` : ''}
+                    {user.diet} {user.dietaryRestrictions?.length > 0 ? `• ${user.dietaryRestrictions[0]}` : ''}
                   </p>
                 </div>
               </button>
@@ -172,9 +149,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${isActive ? 'bg-[#63D753] text-[#0C6816]' : 'bg-[#EFE6D1] text-[#0C6816]'}`}>
                       {tab.badge}
                     </span>
-                  )}
-                  {tab.reward && (
-                    <Award className="w-3.5 h-3.5 text-amber-500 ml-0.5" />
                   )}
                 </button>
               );
