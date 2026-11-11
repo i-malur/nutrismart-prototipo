@@ -2,6 +2,8 @@ import { db } from '../lib/firebase';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { PantryItem } from '../types';
 
+import { collectionGroup, getDocs, updateDoc, doc } from 'firebase/firestore';
+
 const DEFAULT_USER_ID = 'usuario_demo';
 
 // Função auxiliar para remover campos 'undefined' antes de enviar ao Firestore
@@ -138,5 +140,39 @@ export async function deleteUserRecipeFirestore(id: string, userId?: string) {
     await deleteDoc(docRef);
   } catch (error) {
     console.error("Erro ao apagar receita do usuário:", error);
+  }
+}
+
+// Busca receitas pendentes de todos os usuários (usando collectionGroup para varrer todas as subcoleções 'recipes')
+export async function fetchAllPendingRecipes() {
+  try {
+    const querySnapshot = await getDocs(collectionGroup(db, 'recipes'));
+    const allRecipes: any[] = [];
+    
+    querySnapshot.forEach((document) => {
+      const data = document.data();
+      // Pega o ID do documento e do usuário pelo caminho se necessário
+      allRecipes.push({
+        id: document.id,
+        path: document.ref.path, // ex: users/UID/recipes/RECIPE_ID
+        ...data
+      });
+    });
+
+    // Filtra apenas as que estão em análise
+    return allRecipes.filter(r => r.status === 'em analise');
+  } catch (error) {
+    console.error("Erro ao buscar receitas pendentes:", error);
+    return [];
+  }
+}
+
+// Atualiza o status da receita (aprovar para 'aprovado' ou rejeitar para 'privado')
+export async function updateRecipeStatusFirestore(recipePath: string, newStatus: 'aprovado' | 'privado') {
+  try {
+    const docRef = doc(db, recipePath);
+    await updateDoc(docRef, { status: newStatus });
+  } catch (error) {
+    console.error("Erro ao atualizar status da receita:", error);
   }
 }
