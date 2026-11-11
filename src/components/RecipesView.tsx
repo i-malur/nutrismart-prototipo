@@ -7,12 +7,10 @@ import {
   CheckCircle2,
   XCircle,
   FilterX,
-  ShieldAlert,
   Bookmark,
   Check,
   Plus,
-  Sparkles,
-  BookOpen
+  Sparkles
 } from 'lucide-react';
 import { Recipe, PantryItem, UserProfile } from '../types';
 import { RecipeRegisterForm } from './RecipeRegisterForm';
@@ -39,7 +37,6 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
   const [selectedTag, setSelectedTag] = useState('Todas');
   const [selectedRecipeModal, setSelectedRecipeModal] = useState<Recipe | null>(null);
   const [savedRecipeIds, setSavedRecipeIds] = useState<string[]>([]);
-  const [activeTabFilter, setActiveTabFilter] = useState<'acervo' | 'caderno'>('acervo');
 
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
@@ -62,20 +59,15 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
   const normalizeText = (text: string) =>
     text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-  // Regra de Filtro: Acervo Público vs Caderno Pessoal
+  // Filtra apenas receitas globais ou as aprovadas para o acervo público
   const filteredRecipes = useMemo(() => {
     return recipes.filter(recipe => {
-      // Se estiver na aba do acervo público, exibe apenas receitas globais ou as que foram aprovadas
-      if (activeTabFilter === 'acervo') {
-        const isUserAuthored = (recipe as any).isUserCreated;
-        const approvalStatus = (recipe as any).status;
-        if (isUserAuthored && approvalStatus !== 'aprovado') {
-          return false;
-        }
-      } else {
-        // Na aba "Meu Caderno", exibe as receitas criadas pelo usuário logado
-        const isUserAuthored = (recipe as any).isUserCreated;
-        if (!isUserAuthored) return false;
+      const isUserAuthored = (recipe as any).isUserCreated;
+      const approvalStatus = (recipe as any).status;
+      
+      // Se for receita autoral e não estiver aprovada, esconde do acervo público geral
+      if (isUserAuthored && approvalStatus !== 'aprovado') {
+        return false;
       }
 
       const fullText = normalizeText(
@@ -122,7 +114,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
 
       return true;
     });
-  }, [recipes, user, searchTerm, excludedTerms, selectedTag, activeTabFilter]);
+  }, [recipes, user, searchTerm, excludedTerms, selectedTag]);
 
   const handleSaveRecipe = (recipe: Recipe) => {
     if (savedRecipeIds.includes(recipe.id)) return;
@@ -158,14 +150,14 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
         <div className="relative z-10 space-y-2 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D0F4A4]/20 border border-[#D0F4A4]/30 text-[#D0F4A4] text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5 text-[#63D753]" />
-            <span>Sugestões Inteligentes & Autorais</span>
+            <span>Acervo Público Inteligente</span>
           </div>
 
           <h1 className="font-display font-black text-2xl sm:text-3xl text-white tracking-tight">
-            Receitas & Inspirações
+            Acervo de Receitas
           </h1>
           <p className="text-white/80 text-xs sm:text-sm leading-relaxed">
-            Explore receitas compatíveis com as suas restrições e gerencie o seu caderno pessoal.
+            Explore receitas compatíveis com as suas restrições alimentares e adicione novas criações.
           </p>
         </div>
 
@@ -175,33 +167,6 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
         >
           <Plus className="w-4 h-4 stroke-[3]" />
           <span>Cadastrar Nova Receita</span>
-        </button>
-      </div>
-
-      {/* Alternância de Abas: Acervo Público vs Meu Caderno */}
-      <div className="flex items-center gap-2 border-b border-[#EFE6D1] pb-3">
-        <button
-          onClick={() => setActiveTabFilter('acervo')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            activeTabFilter === 'acervo'
-              ? 'bg-[#0C6816] text-white shadow-xs'
-              : 'bg-white text-[#5E6B52] hover:bg-[#FAF7EE] border border-[#EFE6D1]'
-          }`}
-        >
-          <ChefHat className="w-4 h-4" />
-          <span>Acervo Público Geral</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTabFilter('caderno')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            activeTabFilter === 'caderno'
-              ? 'bg-[#0C6816] text-white shadow-xs'
-              : 'bg-white text-[#5E6B52] hover:bg-[#FAF7EE] border border-[#EFE6D1]'
-          }`}
-        >
-          <BookOpen className="w-4 h-4" />
-          <span>Meu Caderno de Receitas</span>
         </button>
       </div>
 
@@ -262,7 +227,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
           </div>
           <h3 className="font-display font-bold text-base text-[#0C6816]">Nenhuma receita encontrada</h3>
           <p className="text-xs text-[#5E6B52]">
-            Tente ajustar os filtros de busca ou cadastre uma nova receita no seu caderno.
+            Tente ajustar os filtros de busca ou cadastre uma nova receita.
           </p>
         </div>
       ) : (
@@ -270,14 +235,13 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
           {filteredRecipes.map(recipe => {
             const isSaved = savedRecipeIds.includes(recipe.id);
             const isUserCreated = (recipe as any).isUserCreated;
-            const status = (recipe as any).status; // 'em analise', 'aprovado', etc.
+            const status = (recipe as any).status;
 
             return (
               <div
                 key={recipe.id}
                 className="bg-white rounded-3xl border border-[#EFE6D1] hover:border-[#63D753] transition-all p-5 shadow-2xs hover:shadow-md flex flex-col justify-between space-y-4 relative"
               >
-                {/* Badge para receitas criadas pelo usuário */}
                 {isUserCreated && (
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-extrabold bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-lg border border-amber-300">
@@ -287,7 +251,7 @@ export const RecipesView: React.FC<RecipesViewProps> = ({
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
                         status === 'aprovado' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
                       }`}>
-                        {status === 'aprovado' ? 'Aprovado no Acervo' : 'Em Análise'}
+                        {status === 'aprovado' ? 'Aprovado' : 'Em Análise'}
                       </span>
                     )}
                   </div>

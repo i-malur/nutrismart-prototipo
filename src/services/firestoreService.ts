@@ -130,3 +130,13 @@ export async function fetchUserRecipes(userId?: string): Promise<any[]> {
     return [];
   }
 }
+
+export async function deleteUserRecipeFirestore(id: string, userId?: string) {
+  try {
+    const safeId = (userId && userId.trim() !== '') ? userId.trim() : DEFAULT_USER_ID;
+    const docRef = doc(db, `users/${safeId}/recipes`, id);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error("Erro ao apagar receita do usuário:", error);
+  }
+}

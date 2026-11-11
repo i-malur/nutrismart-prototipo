@@ -15,7 +15,7 @@ import { TabType, PantryItem, Recipe, Nutritionist, UserProfile } from './types'
 import { Sparkles, Bot } from 'lucide-react';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 
 // Importações dos serviços do Firebase
 import {
@@ -27,7 +27,8 @@ import {
   saveItemFirestore,
   deleteSavedItemFirestore,
   addRecipeFirestore, 
-  fetchUserRecipes    
+  fetchUserRecipes,
+  deleteUserRecipeFirestore
 } from './services/firestoreService';
 
 export default function App() {
@@ -49,6 +50,13 @@ export default function App() {
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleDeleteUserRecipe = async (id: string) => {
+    if (!currentUserId) return;
+    await deleteUserRecipeFirestore(id, currentUserId);
+    setRecipes(prev => prev.filter(r => r.id !== id));
+    showToast('🗑️ Receita removida do seu caderno.');
   };
 
   // Observa o estado real do Firebase Auth e busca os dados do utilizador no Firestore
@@ -91,9 +99,14 @@ export default function App() {
           // CARREGA AS RECEITAS DO CADERNO DO UTILIZADOR
           const remoteRecipes = await fetchUserRecipes(user.uid);
           if (remoteRecipes && remoteRecipes.length > 0) {
-            setRecipes(remoteRecipes);
+            // Garante que todas as receitas do Firestore fiquem marcadas como criadas/salvas pelo usuário
+            const formattedRecipes = remoteRecipes.map(r => ({
+              ...r,
+              isUserCreated: true
+            }));
+            setRecipes([...initialRecipes, ...formattedRecipes]);
           } else {
-            setRecipes(initialRecipes); // Fallback para as iniciais se a subcoleção estiver vazia
+            setRecipes(initialRecipes);
           }
 
         } catch (e) {
@@ -104,6 +117,7 @@ export default function App() {
         setCurrentUserId(null);
         setPantryItems([]);
         setSavedItems([]);
+        setRecipes(initialRecipes);
       }
     });
 
@@ -306,6 +320,8 @@ export default function App() {
             items={savedItems}
             userRecipes={recipes.filter(r => r.isUserCreated)}
             onDeleteItem={handleDeleteSavedItem}
+            onDeleteUserRecipe={handleDeleteUserRecipe}
+            onAddUserRecipe={handleAddRecipe}
           />
         )}
 
