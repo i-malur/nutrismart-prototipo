@@ -58,7 +58,7 @@ export default function App() {
     if (!currentUserId) return;
     await deleteUserRecipeFirestore(id, currentUserId);
     setRecipes(prev => prev.filter(r => r.id !== id));
-    showToast('🗑️ Receita removida do seu caderno.');
+    showToast('Receita removida do seu caderno.');
   };
 
   // Observa o estado real do Firebase Auth e busca os dados do utilizador no Firestore
@@ -151,13 +151,13 @@ export default function App() {
     if (!currentUserId) return;
     await deleteSavedItemFirestore(id, currentUserId);
     setSavedItems(prev => prev.filter(item => item.id !== id));
-    showToast('🗑️ Item removido dos seus salvos.');
+    showToast('Item removido dos seus salvos.');
   };
 
   const handleLogin = (user: UserProfile) => {
     setUserProfile(user);
     setIsAuthenticated(true);
-    showToast(`👋 Bem-vindo(a) ao NutriSmart, ${user.name}!`);
+    showToast(`Bem-vindo(a) ao NutriSmart, ${user.name}!`);
   };
 
   const handleLogout = async () => {
@@ -172,12 +172,12 @@ export default function App() {
     setIsUserModalOpen(false);
     setIsMobileMoreOpen(false);
     setIsAiAssistantOpen(false);
-    showToast('🔒 Você saiu da sua conta com segurança.');
+    showToast('Você saiu da sua conta com segurança.');
   };
 
   const handleSaveUserProfile = (updated: UserProfile) => {
     setUserProfile(updated);
-    showToast('👤 Perfil e preferências atualizados com sucesso!');
+    showToast('Perfil e preferências atualizados com sucesso!');
   };
 
   // Pantry Handlers com UID real do Firebase
@@ -201,7 +201,7 @@ export default function App() {
     };
 
     setPantryItems(prev => [item, ...prev]);
-    showToast(`✅ "${item.name}" foi adicionado à sua dispensa!`);
+    showToast(`"${item.name}" foi adicionado à sua dispensa!`);
   };
 
   const handleDeletePantryItem = async (id: string) => {
@@ -210,7 +210,7 @@ export default function App() {
     await deletePantryItemFirestore(id, currentUserId);
     setPantryItems(prev => prev.filter(i => i.id !== id));
     if (item) {
-      showToast(`🗑️ "${item.name}" foi removido da dispensa.`);
+      showToast(`"${item.name}" foi removido da dispensa.`);
     }
   };
 
@@ -266,7 +266,7 @@ export default function App() {
       showToast(`📖 "${newRecipe.title}" salva no seu caderno pessoal!`);
     } catch (error) {
       console.error("Erro ao salvar receita no Firestore:", error);
-      showToast('❌ Erro ao salvar receita no banco.');
+      showToast('Erro ao salvar receita no banco.');
     }
   };
 
