@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Sparkles, 
   ChefHat, 
@@ -9,7 +9,10 @@ import {
   Eye, 
   Clock, 
   X,
-  BookOpen
+  BookOpen,
+  User,
+  Filter,
+  Calendar
 } from 'lucide-react';
 import { UserProfile, PantryItem, Recipe } from '../types';
 
@@ -46,11 +49,55 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
   const [activeFilter, setActiveFilter] = useState<'all' | 'weekly_plan' | 'shopping_list'>('all');
   const [selectedItemModal, setSelectedItemModal] = useState<SavedItem | null>(null);
 
-  // 1. Caderno de Receitas concentra: receitas criadas + receitas salvas da IA/pesquisa
+  // Estados de Filtro e Ordenação do Caderno de Receitas
+  const [recipeFilterType, setRecipeFilterType] = useState<'todas' | 'ia' | 'proprias'>('todas');
+  const [recipeSortOrder, setRecipeSortOrder] = useState<'recente' | 'antiga'>('recente');
+
+  // 1. Unifica as receitas criadas pelo usuário + receitas salvas da IA/pesquisa[cite: 13]
   const savedRecipesFromIa = items.filter(item => item.type === 'recipe');
+  
+  // Combina e normaliza para facilitar a filtragem e ordenação conjunta
+  const combinedRecipes = useMemo(() => {
+    const formattedUserRecipes = userRecipes.map(r => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      createdAt: r.createdAt || new Date().toISOString(),
+      isPropria: true,
+      raw: r
+    }));
+
+    const formattedIaRecipes = savedRecipesFromIa.map(i => ({
+      id: i.id,
+      title: i.title,
+      description: i.description,
+      createdAt: i.createdAt || new Date().toISOString(),
+      isPropria: false,
+      raw: i
+    }));
+
+    let result = [...formattedUserRecipes, ...formattedIaRecipes];
+
+    // Aplicar Filtro
+    if (recipeFilterType === 'ia') {
+      result = result.filter(r => !r.isPropria);
+    } else if (recipeFilterType === 'proprias') {
+      result = result.filter(r => r.isPropria);
+    }
+
+    // Aplicar Ordenação
+    result.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime() || 0;
+      const dateB = new Date(b.createdAt).getTime() || 0;
+      return recipeSortOrder === 'recente' ? dateB - dateA : dateA - dateB;
+    });
+
+    return result;
+  }, [userRecipes, savedRecipesFromIa, recipeFilterType, recipeSortOrder]);
+
   const totalRecipesCount = userRecipes.length + savedRecipesFromIa.length;
 
-  // 2. Sugestões & Salvos da IA concentra APENAS: Cardápios semanais e Listas de compras
+  // 2. Sugestões & Salvos da IA concentra APENAS: Cardápios semanais e Listas de compras[cite: 13]
   const filteredIaItems = items.filter(item => {
     if (item.type === 'recipe') return false;
     if (activeFilter === 'all') return true;
@@ -81,7 +128,7 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
   return (
     <div className="space-y-6">
 
-      {/* Banner Superior Limpo (Sem o botão de cadastro, pois agora fica no acervo) */}
+      {/* Banner Superior Limpo */}
       <div className="bg-gradient-to-r from-[#0C6816] via-[#147a22] to-[#0C6816] rounded-3xl p-5 sm:p-8 text-white shadow-lg relative overflow-hidden">
         <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-[#63D753]/20 blur-2xl pointer-events-none" />
         
@@ -130,15 +177,66 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* ABA 1: CADERNO DE RECEITAS                                                */}
+      {/* ABA 1: CADERNO DE RECEITAS (COM FILTROS E ORDENAÇÃO)                     */}
       {/* ========================================================================= */}
       {activeMainTab === 'caderno' && (
         <div className="space-y-4">
-          <div className="bg-white p-4 rounded-2xl border border-[#EFE6D1]">
-            <h2 className="font-display font-bold text-base text-[#0C6816]">
-              Caderno de Receitas Pessoal
-            </h2>
-            <p className="text-xs text-[#5E6B52]">Receitas criadas por você, salvas da pesquisa e sugestões da IA.</p>
+          
+          {/* BARRA DE FILTROS & ORDENAÇÃO DO CADERNO */}
+          <div className="bg-white p-4 rounded-2xl border border-[#EFE6D1] shadow-2xs flex flex-col md:flex-row items-center justify-between gap-4">
+            
+            {/* Filtros por Categoria */}
+            <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+              <span className="text-xs font-bold text-[#5E6B52] flex items-center gap-1 mr-1 shrink-0">
+                <Filter className="w-3.5 h-3.5" /> Filtrar:
+              </span>
+              <button
+                onClick={() => setRecipeFilterType('todas')}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                  recipeFilterType === 'todas'
+                    ? 'bg-[#0C6816] text-white shadow-xs'
+                    : 'bg-[#FAF7EE] text-[#5E6B52] hover:bg-[#EFE6D1]'
+                }`}
+              >
+                Todas ({totalRecipesCount})
+              </button>
+              <button
+                onClick={() => setRecipeFilterType('ia')}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                  recipeFilterType === 'ia'
+                    ? 'bg-[#0C6816] text-white shadow-xs'
+                    : 'bg-[#FAF7EE] text-[#5E6B52] hover:bg-[#EFE6D1]'
+                }`}
+              >
+                <Sparkles className="w-3 h-3 text-[#63D753]" /> Geradas por IA / Salvas
+              </button>
+              <button
+                onClick={() => setRecipeFilterType('proprias')}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1 ${
+                  recipeFilterType === 'proprias'
+                    ? 'bg-[#0C6816] text-white shadow-xs'
+                    : 'bg-[#FAF7EE] text-[#5E6B52] hover:bg-[#EFE6D1]'
+                }`}
+              >
+                <User className="w-3 h-3" /> Minhas Receitas
+              </button>
+            </div>
+
+            {/* Ordenação (Recentes / Antigas) */}
+            <div className="flex items-center gap-2 w-full md:w-auto justify-end border-t md:border-t-0 pt-3 md:pt-0 border-[#EFE6D1]">
+              <span className="text-xs font-bold text-[#5E6B52] flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5" /> Ordenar:
+              </span>
+              <select
+                value={recipeSortOrder}
+                onChange={(e) => setRecipeSortOrder(e.target.value as 'recente' | 'antiga')}
+                className="bg-[#FAF7EE] border border-[#EFE6D1] text-[#0C6816] font-bold text-xs rounded-xl px-3 py-2 outline-hidden cursor-pointer"
+              >
+                <option value="recente">Mais Recentes</option>
+                <option value="antiga">Mais Antigas</option>
+              </select>
+            </div>
+
           </div>
 
           {totalRecipesCount === 0 ? (
@@ -151,85 +249,85 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
                 Cadastre suas próprias receitas na aba de Acervo ou salve receitas para consultá-las aqui!
               </p>
             </div>
+          ) : combinedRecipes.length === 0 ? (
+            <div className="bg-white border border-[#EFE6D1] rounded-3xl p-10 text-center space-y-2">
+              <p className="text-xs text-[#5E6B52]">Nenhuma receita encontrada com o filtro selecionado.</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* 1. Receitas Criadas pelo Usuário */}
-              {userRecipes.map(recipe => (
-                <div key={recipe.id} className="bg-white rounded-3xl border border-[#EFE6D1] p-5 shadow-2xs space-y-3 flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold bg-[#D0F4A4] text-[#0C6816] px-2 py-0.5 rounded-md uppercase tracking-wider">
-                      ✍️ Cadastrada por você
-                    </span>
-                    <h3 className="font-display font-bold text-base text-[#0C6816]">{recipe.title}</h3>
-                    <p className="text-xs text-[#5E6B52] leading-relaxed line-clamp-2">{recipe.description}</p>
-                  </div>
-                  
-                  <div className="pt-3 border-t border-[#EFE6D1] flex items-center justify-between text-xs">
-                    <span className="text-[#5E6B52]">
-                      {recipe.prepTimeMinutes} min • <b>{recipe.calories}</b> kcal
-                    </span>
+              {combinedRecipes.map(item => {
+                const isPropria = item.isPropria;
+                const recipeData = item.raw;
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedItemModal({
-                            id: recipe.id,
-                            type: 'recipe',
-                            title: recipe.title,
-                            description: recipe.description,
-                            createdAt: 'Autoral',
-                            content: {
-                              ingredients: recipe.ingredients?.map((i: any) => typeof i === 'string' ? i : `${i.amount || ''} ${i.name || ''}`),
-                              instructions: Array.isArray(recipe.instructions) ? recipe.instructions.join('\n') : recipe.instructions
-                            }
-                          });
-                        }}
-                        className="px-3 py-1.5 bg-[#0C6816] hover:bg-[#095011] text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-[#63D753]" />
-                        Ver
-                      </button>
-
-                      {onDeleteUserRecipe && (
-                        <button
-                          onClick={() => onDeleteUserRecipe(recipe.id)}
-                          className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                          title="Excluir Receita"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                return (
+                  <div key={item.id} className="bg-white rounded-3xl border border-[#EFE6D1] p-5 shadow-2xs space-y-3 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      {isPropria ? (
+                        <span className="text-[10px] font-bold bg-[#D0F4A4] text-[#0C6816] px-2 py-0.5 rounded-md uppercase tracking-wider">
+                          ✍️ Cadastrada por você
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                          🔖 Receita Salva / IA
+                        </span>
                       )}
+                      
+                      <h3 className="font-display font-bold text-base text-[#0C6816]">{item.title}</h3>
+                      <p className="text-xs text-[#5E6B52] leading-relaxed line-clamp-2">{item.description}</p>
+                    </div>
+                    
+                    <div className="pt-3 border-t border-[#EFE6D1] flex items-center justify-between text-xs">
+                      <span className="text-[#5E6B52]">
+                        {isPropria ? `${recipeData.prepTimeMinutes} min • ${recipeData.calories} kcal` : 'Salvo na biblioteca'}
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            if (isPropria) {
+                              setSelectedItemModal({
+                                id: recipeData.id,
+                                type: 'recipe',
+                                title: recipeData.title,
+                                description: recipeData.description,
+                                createdAt: 'Autoral',
+                                content: {
+                                  ingredients: recipeData.ingredients?.map((i: any) => typeof i === 'string' ? i : `${i.amount || ''} ${i.name || ''}`),
+                                  instructions: Array.isArray(recipeData.instructions) ? recipeData.instructions.join('\n') : recipeData.instructions
+                                }
+                              });
+                            } else {
+                              setSelectedItemModal(recipeData);
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-[#0C6816] hover:bg-[#095011] text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-[#63D753]" />
+                          Ver
+                        </button>
+
+                        {isPropria && onDeleteUserRecipe ? (
+                          <button
+                            onClick={() => onDeleteUserRecipe(recipeData.id)}
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                            title="Excluir Receita"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        ) : !isPropria && onDeleteItem ? (
+                          <button
+                            onClick={() => onDeleteItem(recipeData.id)}
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                            title="Remover Receita Salva"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-
-              {/* 2. Receitas Salvas (Pesquisa / IA) */}
-              {savedRecipesFromIa.map(item => (
-                <div key={item.id} className="bg-white rounded-3xl border border-[#EFE6D1] p-5 shadow-2xs space-y-3 flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                      🔖 Receita Salva
-                    </span>
-                    <h3 className="font-display font-bold text-base text-[#0C6816]">{item.title}</h3>
-                    <p className="text-xs text-[#5E6B52] leading-relaxed line-clamp-2">{item.description}</p>
-                  </div>
-                  <div className="pt-3 border-t border-[#EFE6D1] flex items-center justify-between">
-                    <button
-                      onClick={() => setSelectedItemModal(item)}
-                      className="flex items-center gap-1.5 text-xs font-bold text-[#0C6816] hover:underline cursor-pointer"
-                    >
-                      <Eye className="w-4 h-4 text-[#63D753]" />
-                      <span>Ver Detalhes</span>
-                    </button>
-                    {onDeleteItem && (
-                      <button onClick={() => onDeleteItem(item.id)} className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg cursor-pointer">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
