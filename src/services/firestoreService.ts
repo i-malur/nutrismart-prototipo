@@ -1,12 +1,10 @@
-import { db } from '../lib/firebase';
-import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { PantryItem } from '../types';
-
-import { collectionGroup, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, collectionGroup } from 'firebase/firestore';
+import { deleteUser } from 'firebase/auth';
+import { PantryItem, Recipe } from '../types';
 
 const DEFAULT_USER_ID = 'usuario_demo';
 
-// Função auxiliar para remover campos 'undefined' antes de enviar ao Firestore
 function sanitizeData(data: Record<string, any>) {
   const sanitized: Record<string, any> = {};
   for (const key of Object.keys(data)) {
@@ -65,7 +63,6 @@ export async function deletePantryItemFirestore(id: string, userId?: string) {
   }
 }
 
-// Funções para Salvos / Receitas
 export async function fetchSavedItems(userId?: string): Promise<any[]> {
   try {
     const safeId = (userId && userId.trim() !== '') ? userId.trim() : DEFAULT_USER_ID;
@@ -106,7 +103,7 @@ export async function deleteSavedItemFirestore(id: string, userId?: string) {
 
 export async function addRecipeFirestore(recipe: Recipe, userId?: string) {
   try {
-    const safeId = (userId && userId.trim() !== '') ? userId.trim() : 'usuario_demo';
+    const safeId = (userId && userId.trim() !== '') ? userId.trim() : DEFAULT_USER_ID;
     const cleanData = sanitizeData({
       ...recipe,
       createdAt: new Date().toISOString()
@@ -143,23 +140,20 @@ export async function deleteUserRecipeFirestore(id: string, userId?: string) {
   }
 }
 
-// Busca receitas pendentes de todos os usuários (usando collectionGroup para varrer todas as subcoleções 'recipes')
 export async function fetchAllPendingRecipes() {
   try {
     const querySnapshot = await getDocs(collectionGroup(db, 'recipes'));
     const allRecipes: any[] = [];
-    
+
     querySnapshot.forEach((document) => {
       const data = document.data();
-      // Pega o ID do documento e do usuário pelo caminho se necessário
       allRecipes.push({
         id: document.id,
-        path: document.ref.path, // ex: users/UID/recipes/RECIPE_ID
+        path: document.ref.path,
         ...data
       });
     });
 
-    // Filtra apenas as que estão em análise
     return allRecipes.filter(r => r.status === 'em analise');
   } catch (error) {
     console.error("Erro ao buscar receitas pendentes:", error);
@@ -167,12 +161,103 @@ export async function fetchAllPendingRecipes() {
   }
 }
 
-// Atualiza o status da receita (aprovar para 'aprovado' ou rejeitar para 'privado')
 export async function updateRecipeStatusFirestore(recipePath: string, newStatus: 'aprovado' | 'privado') {
   try {
     const docRef = doc(db, recipePath);
     await updateDoc(docRef, { status: newStatus });
   } catch (error) {
     console.error("Erro ao atualizar status da receita:", error);
+  }
+}
+
+// FUNÇÃO EXPORTADA EXIGIDA PELO MODAL
+export async function requestAccountDeletionFirestore(email: string, userId: string) {
+  try {
+    await addDoc(collection(db, 'deletionRequests'), {
+      userId,
+      email,
+      status: 'pendente',
+      requestedAt: new Date().toISOString()
+    });
+    return true;
+  } catch (error) {
+    console.error("Erro ao solicitar exclusão:", error);
+    throw error;
+  }
+}
+
+// Buscar todos os pedidos de exclusão (pendentes e concluídos)
+export async function fetchDeletionRequests(): Promise<any[]> {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'deletionRequests'));
+    const requests: any[] = [];
+    querySnapshot.forEach((document) => {
+      requests.push({
+        id: document.id,
+        ...document.data()
+      });
+    });
+    return requests; // Retorna todos para o Admin separar por status
+  } catch (error) {
+    console.error("Erro ao buscar pedidos de exclusão:", error);
+    return [];
+  }
+}
+
+// Marcar pedido de exclusão como resolvido/concluído
+export async function resolveDeletionRequest(requestId: string) {
+  try {
+    const docRef = doc(db, 'deletionRequests', requestId);
+    await updateDoc(docRef, {
+      status: 'concluido',
+      resolvedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("Erro ao concluir pedido de exclusão:", error);
+    throw error;
+  }
+}
+
+// Apagar conta do usuário e todas as subcoleções (pantry, recipes, savedItems)
+export async function deleteUserAccount(userId: string) {
+  console.log("A tentar apagar dados para o UID:", userId);
+  
+  if (!userId || userId === 'demo') {
+    console.warn("UID inválido ou de demonstração. A ignorar limpeza de subcoleções.");
+    return;
+  }
+
+  const userRef = doc(db, `users/${userId}`);
+
+  const subCollections = ['pantry', 'recipes', 'savedItems'];
+  for (const subCol of subCollections) {
+    const subColRef = collection(db, `users/${userId}/${subCol}`);
+    const snapshot = await getDocs(subColRef);
+    
+    const deletePromises = snapshot.docs.map(document => deleteDoc(document.ref));
+    await Promise.all(deletePromises);
+  }
+
+  await deleteDoc(userRef);
+  console.log("Dados do utilizador apagados com sucesso do Firestore!");
+}
+
+// Buscar todas as receitas de todos os utilizadores (para moderação e histórico)
+export async function fetchAllRecipesAdmin() {
+  try {
+    const querySnapshot = await getDocs(collectionGroup(db, 'recipes'));
+    const allRecipes: any[] = [];
+    
+    querySnapshot.forEach((document) => {
+      allRecipes.push({
+        id: document.id,
+        path: document.ref.path,
+        ...document.data()
+      });
+    });
+    return allRecipes;
+  } catch (error) {
+    console.error("Erro ao buscar todas as receitas para o admin:", error);
+    return [];
   }
 }

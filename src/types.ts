@@ -27,6 +27,22 @@ export type TabType =
   | 'cardapio' 
   | 'nutricionistas';
 
+  export const AVAILABLE_RESTRICTIONS = [
+  'Sem Glúten',
+  'Sem Lactose',
+  'Sem Açúcar / Diabético',
+  'Vegetariano',
+  'Vegano',
+  'Alergia a Amendoim',
+  'Alergia a Frutos do Mar',
+  'Alergia a Soja',
+  'Alergia a Ovo',
+  'Intolerância a Fructose',
+  'Hipertenso (Baixo Sódio)',
+  'Baixo Colesterol (Low Fat)',
+  'SÍNDROME DO INTESTINO IRRITÁVEL (FODMAP)',
+  'Religiosa / Halal / Kosher'
+];
 export interface PantryItem {
   id: string;
   name: string;

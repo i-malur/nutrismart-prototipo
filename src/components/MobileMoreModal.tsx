@@ -6,7 +6,8 @@ import {
   X, 
   ChevronRight,
   LogOut,
-  User
+  User,
+  ShieldAlert
 } from 'lucide-react';
 import { TabType, UserProfile } from '../types';
 
@@ -149,6 +150,24 @@ export const MobileMoreModal: React.FC<MobileMoreModalProps> = ({
               </button>
             );
           })}
+
+          {/* Atalho Direto para Exclusão de Conta / Privacidade */}
+          <button
+            type="button"
+            onClick={() => { onOpenUserProfile(); onClose(); }}
+            className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50 text-rose-800 transition-all text-left cursor-pointer"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-rose-800">Privacidade & Exclusão de Conta</p>
+                <p className="text-xs text-rose-600">Gerir dados ou solicitar encerramento</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-rose-400" />
+          </button>
 
           {/* Sair da Conta */}
           <button
